@@ -1,5 +1,6 @@
 import json
 import inspect
+import re
 from pocketflow import AsyncNode, AsyncFlow
 from core.config import AppConfig
 from core.llm import call_llm
@@ -43,11 +44,12 @@ class AnswerNode(AsyncNode):
 
 
 class ToolExecutionNode(AsyncNode):
-    def __init__(self, cfg: AppConfig, tools_mapping: dict, event_bus: EventBus):
+    def __init__(self, cfg: AppConfig, tools_mapping: dict, event_bus: EventBus, memory):
         super().__init__()
         self.cfg = cfg
         self.tools_mapping = tools_mapping
         self.event_bus = event_bus
+        self.memory = memory
 
     async def prep_async(self, shared: dict):
         return shared
@@ -75,7 +77,15 @@ class ToolExecutionNode(AsyncNode):
             await self.event_bus.emit("on_tool_call", tool_ctx)
             
             if func_name in self.tools_mapping:
-                func_result = self.tools_mapping[func_name](**args)
+                func = self.tools_mapping[func_name]
+                sig = inspect.signature(func)
+                extra_args = {}
+                if "user_id" in sig.parameters:
+                    extra_args["user_id"] = user_id
+                if "memory" in sig.parameters:
+                    extra_args["memory"] = self.memory
+                
+                func_result = func(**{**args, **extra_args})
                 if inspect.iscoroutine(func_result):
                     func_result = await func_result
             else:
@@ -100,12 +110,13 @@ class IdolhubAgent:
         self.event_bus = EventBus()
         self.tools_schema = list(TOOLS_SCHEMA)
         self.tools_mapping = dict(TOOLS_MAPPING)
+        self.memory = SqliteStore(self.cfg)
         self._build_flow()
 
     def _build_flow(self):
         """Build the PocketFlow execution graph."""
         self.answer_node = AnswerNode(self.cfg)
-        self.tool_node = ToolExecutionNode(self.cfg, self.tools_mapping, self.event_bus)
+        self.tool_node = ToolExecutionNode(self.cfg, self.tools_mapping, self.event_bus, self.memory)
         
         # Wire graph using PocketFlow custom transition operators
         self.answer_node - "tool_call" >> self.tool_node
@@ -115,7 +126,6 @@ class IdolhubAgent:
         self.flow = AsyncFlow(start=self.answer_node)
 
     async def initialize(self):
-        self.memory = SqliteStore(self.cfg)
         await self.memory.initialize()
         
         # Load Skills & Plugins
@@ -140,6 +150,21 @@ class IdolhubAgent:
         for msg in history:
             messages.append({"role": msg["role"], "content": msg["content"]})
         messages.append({"role": "user", "content": user_input})
+        
+        # Retrieve facts and filter them locally
+        facts = await self.memory.get_fakta(user_id, limit=30)
+        query_words = set(re.findall(r'[a-zA-Z0-9]+', user_input.lower()))
+        relevant_facts = []
+        for fact in facts:
+            entity = fact.get("entity", "")
+            entity_words = set(re.findall(r'[a-zA-Z0-9]+', entity.lower()))
+            if query_words.intersection(entity_words):
+                relevant_facts.append(fact)
+        
+        relevant_facts = relevant_facts[:3]
+        if relevant_facts:
+            facts_md = "Relevant facts:\n" + "\n".join(f"- {f['entity']}: {f['nilai']}" for f in relevant_facts)
+            messages.insert(0, {"role": "system", "content": facts_md})
         
         await self.memory.add_message(user_id, "user", user_input)
         

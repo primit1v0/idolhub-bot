@@ -34,6 +34,16 @@ def execute_bash(command: str) -> str:
     except Exception as e:
         return f"ERROR Internal: {e}"
 
+async def save_fact(entity: str, nilai: str, user_id: str, memory) -> str:
+    """Menyimpan fakta pengguna."""
+    fact_id = await memory.save_fakta(user_id, entity, nilai)
+    return f"Fakta berhasil disimpan (ID: {fact_id})."
+
+async def set_preference(kunci: str, nilai: str, user_id: str, memory) -> str:
+    """Menyimpan preferensi pengguna."""
+    await memory.set_preferensi(user_id, kunci, nilai)
+    return f"Preferensi {kunci} berhasil diset menjadi {nilai}."
+
 # Tool Calling Schema (Format OpenAI)
 TOOLS_SCHEMA = [
     {
@@ -52,10 +62,54 @@ TOOLS_SCHEMA = [
                 "required": ["command"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "save_fact",
+            "description": "Menyimpan fakta pengguna.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "entity": {
+                        "type": "string",
+                        "description": "Entitas atau subjek fakta (misal: 'nama', 'pekerjaan', 'hobi')"
+                    },
+                    "nilai": {
+                        "type": "string",
+                        "description": "Isi atau nilai dari fakta tersebut"
+                    }
+                },
+                "required": ["entity", "nilai"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_preference",
+            "description": "Menyimpan preferensi pengguna.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "kunci": {
+                        "type": "string",
+                        "description": "Kunci preferensi (misal: 'bahasa', 'tema', 'kecepatan_bicara')"
+                    },
+                    "nilai": {
+                        "type": "string",
+                        "description": "Isi atau nilai dari preferensi tersebut"
+                    }
+                },
+                "required": ["kunci", "nilai"]
+            }
+        }
     }
 ]
 
 # Mapping function
 TOOLS_MAPPING = {
-    "execute_bash": execute_bash
+    "execute_bash": execute_bash,
+    "save_fact": save_fact,
+    "set_preference": set_preference
 }
