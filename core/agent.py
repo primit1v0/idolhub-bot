@@ -109,6 +109,7 @@ class IdolhubAgent:
         
         # Wire graph using PocketFlow custom transition operators
         self.answer_node - "tool_call" >> self.tool_node
+        self.answer_node - "done" >> None
         self.tool_node >> self.answer_node
         
         self.flow = AsyncFlow(start=self.answer_node)

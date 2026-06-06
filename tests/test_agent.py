@@ -22,7 +22,7 @@ async def test_agent_simple_response(monkeypatch):
     })
 
     # Mock call_llm agar tidak request ke internet
-    def mock_call_llm(config, messages, tools=None):
+    async def mock_call_llm(config, messages, tools=None):
         # Pastikan message user dan history sampai ke LLM
         # history di-inject ke prompt atau ada di messages
         last_msg = messages[-1]["content"]
