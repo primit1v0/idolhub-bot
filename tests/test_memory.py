@@ -64,3 +64,21 @@ async def test_memory_respects_max_messages(memory_store):
     assert len(history) == 3
     assert history[0]["content"] == "Pesan 3"
     assert history[2]["content"] == "Pesan 5"
+
+@pytest.mark.asyncio
+async def test_memory_filters_out_invalid_roles(memory_store):
+    user_id = "user_456"
+    
+    await memory_store.add_message(user_id, "user", "Pesan valid 1")
+    await memory_store.add_message(user_id, "tool", "Hasil tool yang tidak valid")
+    await memory_store.add_message(user_id, "assistant", "Pesan valid 2")
+    
+    history = await memory_store.get_history(user_id)
+    
+    # Hanya 'user' dan 'assistant' yang boleh masuk
+    assert len(history) == 2
+    assert history[0]["role"] == "user"
+    assert history[0]["content"] == "Pesan valid 1"
+    assert history[1]["role"] == "assistant"
+    assert history[1]["content"] == "Pesan valid 2"
+

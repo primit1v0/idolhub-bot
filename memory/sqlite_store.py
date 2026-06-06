@@ -45,7 +45,7 @@ class SqliteStore:
         # Ambil dengan limit, diurutkan DESC untuk dapat yang terbaru, lalu reverse ke urutan asli
         query = '''
             SELECT role, content FROM messages 
-            WHERE user_id = ? 
+            WHERE user_id = ? AND role IN ('user', 'assistant')
             ORDER BY timestamp DESC, id DESC 
             LIMIT ?
         '''
