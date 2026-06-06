@@ -195,3 +195,97 @@ async def test_agent_relevant_facts_injection(monkeypatch):
     assert not any(msg["role"] == "system" and "Relevant facts:" in msg["content"] for msg in captured_messages)
 
     await agent.close()
+
+
+@pytest.mark.asyncio
+async def test_agent_fts_injection(monkeypatch):
+    cfg = AppConfig.model_validate({
+        "app": {"name": "test", "mode": "bot"},
+        "telegram": {"token": "test"},
+        "agent": {"system_prompt": "test", "max_iterations": 3},
+        "llm": {"provider": "openai", "model": "gpt-4"},
+        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:", "max_messages": 2}, "long_term": {"backend": "none", "path": ""}},
+        "skills": {"dir": "./skills"},
+        "tools": {"dir": "./tools"},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "mcp": {"enabled": False},
+        "logging": {"level": "INFO"}
+    })
+
+    captured_messages = []
+    async def mock_call_llm(config, messages, tools=None):
+        nonlocal captured_messages
+        captured_messages = list(messages)
+        return {"type": "text", "content": "Mock response"}
+
+    monkeypatch.setattr("core.agent.call_llm", mock_call_llm)
+
+    agent = IdolhubAgent(cfg)
+    await agent.initialize()
+
+    user_id = "user_fts_agent"
+    # Seed old messages directly
+    await agent.memory.add_message(user_id, "user", "Saya punya kucing bernama Koko")
+    await agent.memory.add_message(user_id, "assistant", "Kucing yang lucu!")
+    await agent.memory.add_message(user_id, "user", "Bagaimana cuaca hari ini?") # Distractor
+    
+    # Act
+    await agent.run(user_id=user_id, user_input="Siapa nama kucing saya?")
+    
+    # Assert FTS injection contains kucing Koko
+    assert len(captured_messages) > 0
+    assert any(msg["role"] == "system" and "Relevant past conversations:" in msg["content"] and "Koko" in msg["content"] for msg in captured_messages)
+
+    await agent.close()
+
+
+@pytest.mark.asyncio
+async def test_agent_facts_scoring(monkeypatch):
+    cfg = AppConfig.model_validate({
+        "app": {"name": "test", "mode": "bot"},
+        "telegram": {"token": "test"},
+        "agent": {"system_prompt": "test", "max_iterations": 3},
+        "llm": {"provider": "openai", "model": "gpt-4"},
+        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
+        "skills": {"dir": "./skills"},
+        "tools": {"dir": "./tools"},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "mcp": {"enabled": False},
+        "logging": {"level": "INFO"}
+    })
+
+    captured_messages = []
+    async def mock_call_llm(config, messages, tools=None):
+        nonlocal captured_messages
+        captured_messages = list(messages)
+        return {"type": "text", "content": "Mock response"}
+
+    monkeypatch.setattr("core.agent.call_llm", mock_call_llm)
+
+    agent = IdolhubAgent(cfg)
+    await agent.initialize()
+
+    user_id = "user_score"
+    # Seed facts with different criteria
+    # 1. 'motor' - High similarity, low recency
+    await agent.memory.save_fakta(user_id, "motor", "mioblack", confidence=0.8)
+    # 2. 'hobi motor roda dua' - Partial similarity, newer
+    await agent.memory.save_fakta(user_id, "hobi motor roda dua", "riding", confidence=0.9)
+    # 3. 'motor sport' - High similarity, newest, lower confidence
+    await agent.memory.save_fakta(user_id, "motor sport", "kawasaki", confidence=0.5)
+
+    await agent.run(user_id=user_id, user_input="Ceritakan tentang motor saya")
+
+    # Assert facts ranking in system prompt
+    assert len(captured_messages) > 0
+    sys_msg = [msg["content"] for msg in captured_messages if msg["role"] == "system" and "Relevant facts:" in msg["content"]][0]
+    
+    # Motor sport should be ranked high due to exact keyword intersection and newest recency, or motor
+    assert "motor sport: kawasaki" in sys_msg
+    assert "motor: mioblack" in sys_msg
+
+    await agent.close()

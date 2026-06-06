@@ -341,6 +341,14 @@ Drop ke `plugins/` folder → auto-loaded saat startup.
 Terinspirasi dari repositori `mrktt`, kami menambahkan arsitektur memori hibrida yang sangat ringan dan tanpa dependensi pihak ketiga:
 - **Tabel Fakta (Deterministic EAV):** Menyimpan data faktual/preferensi pengguna dalam format `fakta(id, entity, nilai, confidence, source, created_at, updated_at)` dan `preferensi(kunci, nilai, updated_at)`.
 - **FTS5 Indexing:** Menggunakan virtual table FTS5 bawaan SQLite untuk pencarian kata kunci pada memori jangka panjang tanpa memerlukan Vector DB.
+- **Memory Gating & Safe Writes (`memory_gate.py`):** Menyaring penulisan fakta/preferensi ke memori agar terhindar dari *poisoning* dengan memeriksa kata kunci perintah berbahaya (`rm`, `execute`, `curl`, dll.) serta memicu penulisan memori hanya atas persetujuan atau instruksi eksplisit pengguna (misal: mengandung kata kunci `SIMPAN KE MEMORI`).
+- **Prompt Injection & Input Gating (`rag_filter.py`):** Memvalidasi input pengguna sebelum dimasukkan ke dalam aliran pencarian memori guna mencegah serangan injeksi (seperti perintah `"ignore previous instructions"` atau `"lupakan semua instruksi"`).
+- **Mini-RRF Rank Fusion Merger (`retriever.py`):** Algoritma perankingan dan penggabungan mini berbasis Reciprocal Rank Fusion (RRF) untuk menyatukan hasil pencarian memori kata kunci (FTS5) dan memori fakta (EAV) secara adil tanpa pustaka eksternal yang berat.
+
+### Tambahan Fitur Heartbeat (Sistem Monitor)
+Terinspirasi dari repositori `fortress-v2`, kami menambahkan utilitas monitoring server yang sangat ringan dan terintegrasi:
+- **Zero-Dependency Monitor (`tools/heartbeat.py`):** Modul mandiri berbasis Python standar untuk mengumpulkan metrik sistem RAM (`/proc/meminfo`), CPU load (`/proc/loadavg`), dan penggunaan Disk (`os.statvfs`) secara lokal tanpa bergantung pada library eksternal `psutil`.
+- **Integrasi Endpoint `/health`:** Memperluas API `/health` di [api/routes/health.py](file:///opt/idolhub/api/routes/health.py) untuk menyertakan metrik kesehatan sistem secara dinamis.
 
 ---
 

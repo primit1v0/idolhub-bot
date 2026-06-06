@@ -167,4 +167,37 @@ async def test_jaccard_deduplication(tmp_path):
     await store.close()
 
 
+@pytest.mark.asyncio
+async def test_fts5_search(tmp_path):
+    cfg = AppConfig.model_validate({
+        "app": {"name": "test", "mode": "bot"},
+        "telegram": {"token": "test"},
+        "agent": {"system_prompt": "test", "max_iterations": 3},
+        "llm": {"provider": "openai", "model": "gpt-4"},
+        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": str(tmp_path / "test.fts.db")}, "long_term": {"backend": "none", "path": ""}},
+        "skills": {"dir": "./skills"},
+        "tools": {"dir": "./tools"},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "mcp": {"enabled": False},
+        "logging": {"level": "INFO"}
+    })
+    store = SqliteStore(cfg)
+    await store.initialize()
+    
+    # Add messages
+    await store.add_message("user_fts", "user", "Saya suka makan martabak keju")
+    await store.add_message("user_fts", "assistant", "Martabak keju itu enak sekali!")
+    await store.add_message("user_fts", "user", "Bagaimana cuaca hari ini?")
+    
+    # Search FTS5
+    matches = await store.search_history_fts("user_fts", "martabak")
+    assert len(matches) >= 1
+    assert "martabak" in matches[0]["content"].lower()
+    
+    await store.close()
+
+
+
 

@@ -66,6 +66,36 @@ class SqliteStore:
                 PRIMARY KEY (user_id, kunci)
             )
         ''')
+        # FTS5 Virtual Table & Triggers
+        await self.db.execute('''
+            CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
+                user_id,
+                role,
+                content,
+                content='messages',
+                content_rowid='id'
+            )
+        ''')
+        
+        # Triggers to keep FTS5 synchronized
+        await self.db.execute('''
+            CREATE TRIGGER IF NOT EXISTS messages_ai AFTER INSERT ON messages BEGIN
+                INSERT INTO messages_fts(rowid, user_id, role, content) VALUES (new.id, new.user_id, new.role, new.content);
+            END;
+        ''')
+        await self.db.execute('''
+            CREATE TRIGGER IF NOT EXISTS messages_ad AFTER DELETE ON messages BEGIN
+                INSERT INTO messages_fts(messages_fts, rowid, user_id, role, content) 
+                VALUES('delete', old.id, old.user_id, old.role, old.content);
+            END;
+        ''')
+        await self.db.execute('''
+            CREATE TRIGGER IF NOT EXISTS messages_au AFTER UPDATE ON messages BEGIN
+                INSERT INTO messages_fts(messages_fts, rowid, user_id, role, content) 
+                VALUES('delete', old.id, old.user_id, old.role, old.content);
+                INSERT INTO messages_fts(rowid, user_id, role, content) VALUES (new.id, new.user_id, new.role, new.content);
+            END;
+        ''')
         await self.db.commit()
 
     async def add_message(self, user_id: str, role: str, content: str):
@@ -170,6 +200,29 @@ class SqliteStore:
         async with self.db.execute(query, (str(user_id), kunci)) as cursor:
             row = await cursor.fetchone()
         return row[0] if row else default
+
+    async def search_history_fts(self, user_id: str, query: str, limit: int = 3) -> List[Dict]:
+        """Mencari riwayat pesan lama menggunakan FTS5."""
+        cleaned_query = re.sub(r'[^a-zA-Z0-9\s]', ' ', query).strip()
+        if not cleaned_query:
+            return []
+        words = [w for w in cleaned_query.split() if len(w) > 2]
+        if not words:
+            return []
+        match_expr = " OR ".join(words)
+        
+        sql = '''
+            SELECT role, content FROM messages_fts 
+            WHERE user_id = ? AND messages_fts MATCH ? 
+            LIMIT ?
+        '''
+        try:
+            async with self.db.execute(sql, (str(user_id), match_expr, limit)) as cursor:
+                rows = await cursor.fetchall()
+            return [{"role": r[0], "content": r[1]} for r in rows]
+        except aiosqlite.OperationalError:
+            # Fallback jika FTS5 query format bermasalah
+            return []
 
     async def close(self):
         """Tutup koneksi database."""

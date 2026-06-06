@@ -20,7 +20,7 @@ Proses audit keamanan komprehensif fase kedua telah diselesaikan setelah melakuk
 | **pip-audit** | - | **0** | ✅ Clean (Lolos) | Database OSV mengonfirmasi 0 celah keamanan pada dependensi. |
 | **Safety** | 0 | **0** | ✅ Clean (Lolos) | 0 kerentanan terdeteksi pada dependensi `requirements.txt`. |
 | **Semgrep** | 3 | **0** | ✅ Clean (Lolos) | Seluruh temuan *blocking* telah diperbaiki dan diverifikasi bersih. |
-| **Bandit** | 99 | **123 (Low), 5 (Medium)** | ✅ Clean (Lolos) | 0 temuan tingkat High pada kode produksi. Temuan medium/low adalah `/tmp` di sandbox/tests dan `assert` di unit tests. |
+| **Bandit** | 99 | **139 (Low), 5 (Medium)** | ✅ Clean (Lolos) | 0 temuan tingkat High pada kode produksi. Temuan medium/low adalah `/tmp` di sandbox/tests dan `assert` di unit tests. |
 
 ---
 
@@ -55,7 +55,7 @@ Bandit memindai kode Python untuk mendeteksi kelemahan logic (CWE).
 * **Hasil Pemindaian:**
   * **High Severity:** **0** — *Masalah `shell=True` telah diperbaiki*.
   * **Medium Severity:** **5** — *Sisa 5 temuan adalah direktori sementara `/tmp` di dalam sandbox config dan berkas test*.
-  * **Low Severity:** **123** — Seluruhnya merupakan asersi pengujian (`assert`) di folder `tests/` yang mutlak diperlukan untuk unit testing (termasuk unit test memori baru).
+  * **Low Severity:** **139** — Seluruhnya merupakan asersi pengujian (`assert`) di folder `tests/` yang mutlak diperlukan untuk unit testing (termasuk unit test memori baru).
 
 ---
 

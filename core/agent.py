@@ -151,20 +151,35 @@ class IdolhubAgent:
             messages.append({"role": msg["role"], "content": msg["content"]})
         messages.append({"role": "user", "content": user_input})
         
-        # Retrieve facts and filter them locally
+        # Retrieve facts and score them
         facts = await self.memory.get_fakta(user_id, limit=30)
         query_words = set(re.findall(r'[a-zA-Z0-9]+', user_input.lower()))
-        relevant_facts = []
-        for fact in facts:
+        scored_facts = []
+        for i, fact in enumerate(facts):
             entity = fact.get("entity", "")
             entity_words = set(re.findall(r'[a-zA-Z0-9]+', entity.lower()))
-            if query_words.intersection(entity_words):
-                relevant_facts.append(fact)
+            intersection = query_words.intersection(entity_words)
+            if intersection:
+                sim_score = len(intersection) / len(entity_words) if entity_words else 0.0
+                rec_score = 1.0 - (i / len(facts)) if len(facts) > 1 else 1.0
+                conf_score = fact.get("confidence", 0.9)
+                score = (0.5 * sim_score) + (0.3 * rec_score) + (0.2 * conf_score)
+                scored_facts.append((score, fact))
+        scored_facts.sort(key=lambda x: x[0], reverse=True)
+        relevant_facts = [item[1] for item in scored_facts[:3]]
         
-        relevant_facts = relevant_facts[:3]
         if relevant_facts:
             facts_md = "Relevant facts:\n" + "\n".join(f"- {f['entity']}: {f['nilai']}" for f in relevant_facts)
             messages.insert(0, {"role": "system", "content": facts_md})
+            
+        # Retrieve FTS5 matching messages
+        fts_messages = await self.memory.search_history_fts(user_id, user_input, limit=3)
+        recent_contents = [m["content"] for m in messages[-4:]] if len(messages) >= 4 else [m["content"] for m in messages]
+        unique_fts = [m for m in fts_messages if m["content"] not in recent_contents]
+        
+        if unique_fts:
+            fts_md = "Relevant past conversations:\n" + "\n".join(f"- {m['role']}: {m['content']}" for m in unique_fts)
+            messages.insert(0, {"role": "system", "content": fts_md})
         
         await self.memory.add_message(user_id, "user", user_input)
         
