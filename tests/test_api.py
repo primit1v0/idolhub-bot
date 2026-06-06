@@ -48,7 +48,10 @@ def client(mock_cfg, monkeypatch):
 def test_health_endpoint(client):
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "app": "idolhub"}
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["app"] == "idolhub"
+
     
 def test_chat_endpoint(client):
     response = client.post("/chat", json={"message": "hello", "user_id": "123"})
@@ -219,5 +222,17 @@ def test_update_config_secrets_overwrite_protection(client, monkeypatch, tmp_pat
     
     assert written_data["telegram"]["token"] == "my_original_secret_token"
     assert written_data["app"]["name"] == "updated_app_name"
+
+
+def test_health_metrics(client):
+    response = client.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert "system" in data
+    assert "ram_available_mb" in data["system"]
+    assert "disk" in data["system"]
+    assert "cpu_load_avg" in data["system"]
+
 
 
