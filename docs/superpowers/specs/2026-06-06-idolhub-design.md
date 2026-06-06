@@ -337,6 +337,11 @@ Drop ke `plugins/` folder → auto-loaded saat startup.
 - Semantic search: agent bisa recall info relevan dari history jauh
 - Embedding model: text-embedding-3-small (OpenAI) atau lokal
 
+### Tambahan Perkembangan Memori (Deterministic Facts & FTS5)
+Terinspirasi dari repositori `mrktt`, kami menambahkan arsitektur memori hibrida yang sangat ringan dan tanpa dependensi pihak ketiga:
+- **Tabel Fakta (Deterministic EAV):** Menyimpan data faktual/preferensi pengguna dalam format `fakta(id, entity, nilai, confidence, source, created_at, updated_at)` dan `preferensi(kunci, nilai, updated_at)`.
+- **FTS5 Indexing:** Menggunakan virtual table FTS5 bawaan SQLite untuk pencarian kata kunci pada memori jangka panjang tanpa memerlukan Vector DB.
+
 ---
 
 ## 9. API & MCP

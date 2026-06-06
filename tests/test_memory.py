@@ -82,3 +82,50 @@ async def test_memory_filters_out_invalid_roles(memory_store):
     assert history[1]["role"] == "assistant"
     assert history[1]["content"] == "Pesan valid 2"
 
+@pytest.mark.asyncio
+async def test_memory_facts_eav(memory_store):
+    user_id = "user_789"
+    
+    # Simpan fakta baru
+    fact_id = await memory_store.save_fakta(user_id, "motor", "mioblack")
+    assert fact_id > 0
+    
+    # Ambil fakta
+    facts = await memory_store.get_fakta(user_id, "motor")
+    assert len(facts) == 1
+    assert facts[0]["entity"] == "motor"
+    assert facts[0]["nilai"] == "mioblack"
+    assert facts[0]["confidence"] == 0.9
+    
+    # Update fakta yang sama (IntegrityError trigger update)
+    update_res = await memory_store.save_fakta(user_id, "motor", "mioblack", confidence=0.95, source="manual")
+    assert update_res > 0
+    
+    facts = await memory_store.get_fakta(user_id, "motor")
+    assert len(facts) == 1
+    assert facts[0]["confidence"] == 0.95
+    assert facts[0]["source"] == "manual"
+    
+    # Hapus fakta
+    deleted = await memory_store.delete_fakta(user_id, "motor")
+    assert deleted == 1
+    
+    facts = await memory_store.get_fakta(user_id, "motor")
+    assert len(facts) == 0
+
+@pytest.mark.asyncio
+async def test_memory_preferences(memory_store):
+    user_id = "user_789"
+    
+    # Set preferensi
+    await memory_store.set_preferensi(user_id, "theme", "dark")
+    
+    # Get preferensi
+    val = await memory_store.get_preferensi(user_id, "theme")
+    assert val == "dark"
+    
+    # Get preferensi default jika tidak ada
+    val_default = await memory_store.get_preferensi(user_id, "language", default="id")
+    assert val_default == "id"
+
+

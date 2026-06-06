@@ -30,6 +30,31 @@ class SqliteStore:
             )
         ''')
         await self.db.execute('CREATE INDEX IF NOT EXISTS idx_user_id ON messages(user_id)')
+        
+        # Tabel Fakta (Deterministic LTM)
+        await self.db.execute('''
+            CREATE TABLE IF NOT EXISTS fakta (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                entity TEXT NOT NULL,
+                nilai TEXT NOT NULL,
+                confidence REAL DEFAULT 0.9,
+                source TEXT DEFAULT 'auto',
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, entity, nilai)
+            )
+        ''')
+        
+        # Tabel Preferensi
+        await self.db.execute('''
+            CREATE TABLE IF NOT EXISTS preferensi (
+                user_id TEXT NOT NULL,
+                kunci TEXT NOT NULL,
+                nilai TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, kunci)
+            )
+        ''')
         await self.db.commit()
 
     async def add_message(self, user_id: str, role: str, content: str):
@@ -55,6 +80,70 @@ class SqliteStore:
         # Reverse agar kronologis (lama -> baru)
         history = [{"role": row[0], "content": row[1]} for row in reversed(rows)]
         return history
+
+    async def save_fakta(self, user_id: str, entity: str, nilai: str, confidence: float = 0.9, source: str = "auto") -> int:
+        """Menyimpan atau memperbarui fakta pengguna (EAV facts)."""
+        try:
+            cursor = await self.db.execute(
+                '''INSERT INTO fakta (user_id, entity, nilai, confidence, source) 
+                   VALUES (?, ?, ?, ?, ?)''',
+                (str(user_id), entity, nilai, confidence, source)
+            )
+            await self.db.commit()
+            return cursor.lastrowid
+        except aiosqlite.IntegrityError:
+            cursor = await self.db.execute(
+                '''UPDATE fakta SET confidence = ?, source = ? 
+                   WHERE user_id = ? AND entity = ? AND nilai = ?''',
+                (confidence, source, str(user_id), entity, nilai)
+            )
+            await self.db.commit()
+            return cursor.rowcount
+
+    async def get_fakta(self, user_id: str, entity: str | None = None, limit: int = 10) -> List[Dict]:
+        """Mengambil daftar fakta pengguna."""
+        if entity:
+            query = '''SELECT entity, nilai, confidence, source FROM fakta 
+                       WHERE user_id = ? AND entity = ? ORDER BY timestamp DESC LIMIT ?'''
+            async with self.db.execute(query, (str(user_id), entity, limit)) as cursor:
+                rows = await cursor.fetchall()
+        else:
+            query = '''SELECT entity, nilai, confidence, source FROM fakta 
+                       WHERE user_id = ? ORDER BY timestamp DESC LIMIT ?'''
+            async with self.db.execute(query, (str(user_id), limit)) as cursor:
+                rows = await cursor.fetchall()
+        return [{"entity": r[0], "nilai": r[1], "confidence": r[2], "source": r[3]} for r in rows]
+
+    async def delete_fakta(self, user_id: str, entity: str, nilai: str | None = None) -> int:
+        """Menghapus fakta pengguna."""
+        if nilai:
+            cursor = await self.db.execute(
+                'DELETE FROM fakta WHERE user_id = ? AND entity = ? AND nilai = ?',
+                (str(user_id), entity, nilai)
+            )
+        else:
+            cursor = await self.db.execute(
+                'DELETE FROM fakta WHERE user_id = ? AND entity = ?',
+                (str(user_id), entity)
+            )
+        await self.db.commit()
+        return cursor.rowcount
+
+    async def set_preferensi(self, user_id: str, kunci: str, nilai: str):
+        """Menyimpan atau memperbarui preferensi pengguna."""
+        await self.db.execute(
+            '''INSERT OR REPLACE INTO preferensi (user_id, kunci, nilai) 
+               VALUES (?, ?, ?)''',
+            (str(user_id), kunci, nilai)
+        )
+        await self.db.commit()
+
+    async def get_preferensi(self, user_id: str, kunci: str, default: str = "") -> str:
+        """Mengambil nilai preferensi pengguna."""
+        query = 'SELECT nilai FROM preferensi WHERE user_id = ? AND kunci = ?'
+        async with self.db.execute(query, (str(user_id), kunci)) as cursor:
+            row = await cursor.fetchone()
+        return row[0] if row else default
 
     async def close(self):
         """Tutup koneksi database."""
