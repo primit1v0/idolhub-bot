@@ -251,8 +251,8 @@ Paralel:
 
 ### 4.2 Secrets — `/etc/idolhub/secrets.env`
 
-```bash
-# /etc/idolhub/secrets.env
+```env
+# /etc/idolhub/idolhub.env
 # chmod 600 — TIDAK pernah masuk git
 TELEGRAM_BOT_TOKEN=xxxxx
 OPENAI_API_KEY=sk-xxxxx

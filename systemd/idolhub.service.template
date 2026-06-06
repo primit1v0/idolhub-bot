@@ -5,12 +5,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=sandi
-Group=sandi
 WorkingDirectory=/opt/idolhub
 
-# Secrets di-inject dari luar project — TIDAK ada .env di folder project
-EnvironmentFile=/etc/idolhub/secrets.env
+# Secrets di-inject dari ~/.config/idolhub/.env (mirip nanobot)
+EnvironmentFile=/etc/idolhub/idolhub.env
 
 # Gunakan venv dari uv
 ExecStart=/opt/idolhub/.venv/bin/python main.py
@@ -31,4 +29,4 @@ NoNewPrivileges=true
 PrivateTmp=true
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
