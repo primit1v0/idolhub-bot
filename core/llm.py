@@ -48,6 +48,8 @@ def call_llm(cfg: AppConfig, messages: list) -> str:
         *messages
     ]
     
+    import re
+    
     response = client.chat.completions.create(
         model=cfg.llm.model,
         messages=full_messages,
@@ -55,4 +57,10 @@ def call_llm(cfg: AppConfig, messages: list) -> str:
         max_tokens=cfg.llm.max_tokens,
     )
     
-    return response.choices[0].message.content
+    content = response.choices[0].message.content or ""
+    
+    # Menghapus reasoning leak (tag <think> atau <thought> beserta isinya)
+    # Biasanya model reasoning seperti gemma atau deepseek membocorkan ini
+    content = re.sub(r'<(?:think|thought)>.*?</(?:think|thought)>', '', content, flags=re.DOTALL).strip()
+    
+    return content
