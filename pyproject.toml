@@ -5,22 +5,36 @@ description = "PocketFlow personal assistant — Telegram + API + MCP, plugin-fi
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    # Core framework — 100 lines, zero bloat
     "pocketflow>=0.0.1",
+    # Telegram — async bot handler
     "python-telegram-bot>=21.0",
+    # LLM — OpenAI-compatible SDK (slim)
     "openai>=1.0.0",
-    "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.32.0",
-    "mcp>=1.0.0",
-    "aiosqlite>=0.20.0",
-    "chromadb>=0.5.0",
-    "pydantic>=2.0.0",
-    "pydantic-settings>=2.0.0",
-    "pyyaml>=6.0",
+    # HTTP client — used by providers & tools
     "httpx>=0.27.0",
-    "duckduckgo-search>=6.0.0",
+    # API server — plain, no extras
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    # MCP protocol — official SDK
+    "mcp>=1.0.0",
+    # Memory — lightweight async SQLite
+    "aiosqlite>=0.20.0",
+    # Data validation — minimal usage
+    "pydantic>=2.0.0",
+    # Skill frontmatter parser
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
+# Phase 2: vector memory (optional, heavy — install only when needed)
+vector = [
+    "sqlite-vec>=0.1.0",
+]
+# Web search tool (optional — bisa pakai httpx langsung ke DDG JSON API)
+search = [
+    "duckduckgo-search>=6.0.0",
+]
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.24.0",

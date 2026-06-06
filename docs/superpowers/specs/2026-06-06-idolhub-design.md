@@ -4,6 +4,7 @@
 **Repo:** https://github.com/primit1v0/idolhub-bot  
 **Status:** Approved ✅
 
+
 ---
 
 ## 1. Overview
@@ -15,6 +16,71 @@
 - **Protocol**: MCP (Model Context Protocol) server
 - **Architecture**: Plugin-first — skill, tool, plugin bisa di-inject tanpa ubah core
 - **LLM**: OpenAI-compatible API, GitHub Codex OAuth, GitHub Copilot CLI token
+
+---
+
+## 2. Lightweight Engineering Principles
+
+> **Aturan utama: jika ada dua cara untuk menyelesaikan sesuatu, pilih yang lebih ringan.**
+
+### 2.1 Zero Bloatware
+
+- **Tidak ada dependency besar** tanpa alasan kuat yang terdokumentasi
+- Setiap package di `pyproject.toml` wajib memiliki justifikasi di komentar
+- Sebelum menambah package baru: cek apakah bisa pakai stdlib atau dependency yang sudah ada
+- Semua heavy dependencies (vector DB, ML libs, dll) masuk `[optional-dependencies]` — tidak terinstall by default
+
+### 2.2 Zero Dead Code
+
+- Tidak ada fungsi/class/import yang tidak dipakai
+- Tidak ada commented-out code yang di-commit
+- Tidak ada `TODO` tanpa issue tracker reference
+- Setiap file harus bisa dijustifikasi: hapus jika tidak ada yang memanggilnya
+
+### 2.3 Pure & Minimal Code
+
+- Setiap fungsi melakukan **satu hal** dengan jelas
+- Tidak ada over-engineering atau abstraksi yang tidak diperlukan sekarang (YAGNI)
+- Panjang file maksimal ~150 baris — jika lebih, pecah menjadi modul terpisah
+- Type hints wajib di semua public API
+- Docstring hanya untuk fungsi yang tidak self-explanatory dari nama + type hints
+
+### 2.4 Dependency Audit (per Phase)
+
+**Phase 1 — Core dependencies (total install ~30MB):**
+
+| Package | Ukuran | Justifikasi |
+|---|---|---|
+| `pocketflow` | ~56KB | Core framework |
+| `python-telegram-bot` | ~1MB | Telegram async handler |
+| `openai` | ~1MB | OpenAI-compatible SDK |
+| `httpx` | ~500KB | HTTP client untuk providers & tools |
+| `fastapi` | ~300KB | REST API |
+| `uvicorn` | ~200KB | ASGI server (plain, no extras) |
+| `mcp` | ~500KB | MCP protocol SDK |
+| `aiosqlite` | ~100KB | Async SQLite memory |
+| `pydantic` | ~2MB | Data validation |
+| `pyyaml` | ~200KB | Skill frontmatter parser |
+
+**Dibuang / Optional:**
+
+| Package | Alasan Dibuang | Alternatif |
+|---|---|---|
+| `chromadb` | 200MB+, C++ deps, onnxruntime | `sqlite-vec` (Phase 2, optional) |
+| `pydantic-settings` | Overkill | Custom `$VAR` resolver (stdlib `os.environ`) |
+| `uvicorn[standard]` | Tambah websockets, watchfiles, httptools | Plain `uvicorn` |
+| `duckduckgo-search` | Bisa pakai `httpx` ke DDG JSON API langsung | Optional extra |
+
+### 2.5 Aturan Menambah Dependency Baru
+
+Sebelum `uv add X`, jawab semua pertanyaan ini:
+
+1. Apakah bisa pakai stdlib Python? (`json`, `re`, `sqlite3`, `asyncio`, dll)
+2. Apakah `httpx` atau dependency yang sudah ada bisa handle ini?
+3. Berapa ukuran install package ini beserta transitive deps-nya?
+4. Apakah ini benar-benar dibutuhkan sekarang, atau bisa defer ke phase berikutnya?
+
+Jika tidak lulus minimal 2 pertanyaan → jangan tambah.
 
 ---
 
@@ -321,17 +387,21 @@ WantedBy=multi-user.target
 
 ---
 
-## 12. Tech Stack
+## 12. Tech Stack (Audited)
 
-| Komponen | Library |
-|---|---|
-| Framework | PocketFlow |
-| Telegram | python-telegram-bot |
-| LLM | openai (SDK) |
-| API | FastAPI + uvicorn |
-| MCP | mcp (official SDK) |
-| Memory (short) | aiosqlite |
-| Memory (long) | chromadb |
-| Config | pydantic-settings |
-| Package manager | uv |
-| Deployment | systemd |
+| Komponen | Library | Catatan |
+|---|---|---|
+| Framework | `pocketflow` | 100 lines, zero bloat |
+| Telegram | `python-telegram-bot` | Async, standard |
+| LLM | `openai` | OpenAI-compatible SDK |
+| HTTP Client | `httpx` | Dipakai oleh providers & tools |
+| API | `fastapi` + `uvicorn` | Plain uvicorn, no extras |
+| MCP | `mcp` | Official SDK |
+| Memory (short) | `aiosqlite` | Lightweight async SQLite |
+| Memory (long) | `sqlite-vec` *(optional)* | Phase 2, ringan vs chromadb |
+| Validation | `pydantic` | Minimal usage |
+| Skills parser | `pyyaml` | Frontmatter only |
+| Package manager | `uv` | 10-100x faster than pip |
+| Deployment | `systemd` | Native, no Docker overhead |
+
+> **Tidak ada**: chromadb, pydantic-settings, uvicorn[standard], atau paket besar lainnya di core install.
