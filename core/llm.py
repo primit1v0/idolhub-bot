@@ -1,7 +1,7 @@
-from openai import OpenAI
+from openai import AsyncOpenAI
 from core.config import AppConfig
 
-def get_llm_client(cfg: AppConfig) -> OpenAI:
+def get_llm_client(cfg: AppConfig) -> AsyncOpenAI:
     """
     Mengembalikan instance OpenAI-compatible client berdasarkan provider yang dipilih di config.
     Credentials diambil dari cfg.providers[provider].
@@ -30,16 +30,16 @@ def get_llm_client(cfg: AppConfig) -> OpenAI:
     if not api_key:
         raise ValueError(f"Tidak ada API Key / Token yang valid untuk provider '{provider_name}'")
 
-    return OpenAI(
+    return AsyncOpenAI(
         base_url=base_url,
         api_key=api_key,
         timeout=cfg.llm.timeout,
         max_retries=2
     )
 
-def call_llm(cfg: AppConfig, messages: list, tools: list = None):
+async def call_llm(cfg: AppConfig, messages: list, tools: list = None):
     """
-    Helper function untuk memanggil LLM dengan menginjeksi system prompt dari agent config.
+    Helper function untuk memanggil LLM secara asinkron dengan menginjeksi system prompt dari agent config.
     """
     client = get_llm_client(cfg)
     
@@ -59,7 +59,7 @@ def call_llm(cfg: AppConfig, messages: list, tools: list = None):
     if tools:
         kwargs["tools"] = tools
 
-    response = client.chat.completions.create(**kwargs)
+    response = await client.chat.completions.create(**kwargs)
     
     msg = response.choices[0].message
     
