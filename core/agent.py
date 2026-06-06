@@ -70,9 +70,8 @@ class IdolhubAgent:
                 msg_obj = result["message_obj"]
                 messages.append(msg_obj)
                 
-                # Simpan niat tool call ke memory sebagai referensi
-                tool_names = [tc.function.name for tc in result["calls"]]
-                await self.memory.add_message(user_id, "assistant", f"[Menggunakan Tool: {', '.join(tool_names)}]")
+                # Jangan simpan detail tool calls ke memory jangka panjang karena merusak skema OpenAI
+                # cukup biarkan di dalam session saat ini (messages array).
                 
                 for tc in result["calls"]:
                     func_name = tc.function.name
@@ -85,9 +84,6 @@ class IdolhubAgent:
                         func_result = TOOLS_MAPPING[func_name](**args)
                     else:
                         func_result = f"Error: Tool {func_name} not found"
-                        
-                    # Simpan hasil tool ke memory
-                    await self.memory.add_message(user_id, "tool", str(func_result))
                         
                     messages.append({
                         "role": "tool",
