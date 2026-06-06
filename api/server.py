@@ -13,7 +13,7 @@ logger = logging.getLogger("idolhub.api")
 async def lifespan(app: FastAPI):
     logger.info("Initializing active configurations and agent for REST API server...")
     try:
-        cfg = load_config()
+        cfg = getattr(app.state, "cfg", None) or load_config()
         agent = IdolhubAgent(cfg)
         await agent.initialize()
         app.state.agent = agent
@@ -27,13 +27,17 @@ async def lifespan(app: FastAPI):
         logger.info("REST API lifespan cleanup complete.")
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="idolhub API", lifespan=lifespan)
-    
     cfg = load_config()
+    app = FastAPI(title="idolhub API", lifespan=lifespan)
+    app.state.cfg = cfg
+    
+    origins = cfg.api.cors_origins or ["*"]
+    allow_credentials = "*" not in origins
+    
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=cfg.api.cors_origins or ["*"],
-        allow_credentials=True,
+        allow_origins=origins,
+        allow_credentials=allow_credentials,
         allow_methods=["*"],
         allow_headers=["*"],
     )
