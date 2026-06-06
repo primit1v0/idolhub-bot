@@ -9,6 +9,7 @@ from tools.registry import TOOLS_SCHEMA, TOOLS_MAPPING
 from core.event_bus import EventBus
 from plugins.loader import load_plugins
 from skills.loader import load_skills
+from core.rag_filter import filter_query
 
 class AnswerNode(AsyncNode):
     def __init__(self, cfg: AppConfig):
@@ -138,6 +139,11 @@ class IdolhubAgent:
 
     async def run(self, user_id: str, user_input: str) -> str:
         """Run the agent asynchronously with the given user input."""
+        # Check prompt injection
+        filtered = filter_query(user_input)
+        if filtered["status"] == "BLOCKED":
+            return "Maaf, permintaan Anda tidak dapat diproses demi alasan keamanan."
+
         ctx = {"user_id": user_id, "user_input": user_input}
         await self.event_bus.emit("before_message", ctx)
         
