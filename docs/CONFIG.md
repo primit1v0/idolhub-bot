@@ -70,7 +70,7 @@ Semua modul (core/, providers/, api/, mcp/, dll)
 
 | Key | Type | Default | Keterangan |
 |---|---|---|---|
-| `llm.provider` | string | `"openai"` | Provider aktif: `openai` \| `codex` \| `copilot` |
+| `llm.provider` | string | `"openai"` | Provider aktif: `openai` \| `openai_codex` \| `github_copilot` |
 | `llm.model` | string | `"gpt-4o"` | Nama model yang dipakai |
 | `llm.temperature` | float | `0.7` | Kreativitas output (0.0 = deterministik) |
 | `llm.max_tokens` | int | `4096` | Batas token per response |
@@ -92,19 +92,19 @@ Hanya provider yang dipilih di `llm.provider` yang aktif. Sisanya diabaikan.
 | `base_url` | string | Endpoint API. Bisa custom untuk Ollama, LM Studio, dll |
 | `api_key` | string | API key (`$OPENAI_API_KEY`) |
 
-#### `providers.codex`
+#### `providers.openai_codex`
+
+| Key | Type | Keterangan |
+|---|---|---|
+| `base_url` | string | `https://api.openai.com/v1` |
+| `oauth_token` | string | OpenAI Codex OAuth token (`$OPENAI_CODEX_TOKEN`) |
+
+#### `providers.github_copilot`
 
 | Key | Type | Keterangan |
 |---|---|---|
 | `base_url` | string | `https://api.githubcopilot.com` |
-| `oauth_token` | string | GitHub Codex OAuth token (`$GITHUB_CODEX_TOKEN`) |
-
-#### `providers.copilot`
-
-| Key | Type | Keterangan |
-|---|---|---|
-| `base_url` | string | `https://api.githubcopilot.com` |
-| `cli_token` | string | Token dari `gh auth token` (`$GITHUB_COPILOT_TOKEN`) |
+| `cli_token` | string | Token dari `gh auth token` atau OAuth (`$GITHUB_COPILOT_TOKEN`) |
 
 ---
 

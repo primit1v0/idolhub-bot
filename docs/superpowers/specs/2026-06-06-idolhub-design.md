@@ -15,7 +15,7 @@
 - **Backend API**: FastAPI REST (secondary interface)
 - **Protocol**: MCP (Model Context Protocol) server
 - **Architecture**: Plugin-first — skill, tool, plugin bisa di-inject tanpa ubah core
-- **LLM**: OpenAI-compatible API, GitHub Codex OAuth, GitHub Copilot CLI token
+- **LLM**: OpenAI-compatible API, OpenAI Codex OAuth, GitHub Copilot CLI token
 
 ---
 
@@ -124,8 +124,8 @@ idolhub/
 │
 ├── providers/
 │   ├── openai_provider.py      # OpenAI / OpenAI-compatible
-│   ├── codex_provider.py       # GitHub Codex via OAuth
-│   └── copilot_provider.py     # GitHub Copilot via CLI auth token
+│   ├── openai_codex_provider.py # OpenAI Codex via OAuth
+│   └── github_copilot_provider.py # GitHub Copilot via CLI auth token
 │
 ├── skills/                     # OpenClaw/Hermes-compatible skills
 │   ├── loader.py               # Auto-discover skills dari folder
@@ -218,11 +218,11 @@ Paralel:
     "max_tokens": 4096
   },
   "providers": {
-    "codex": {
-      "oauth_token": "$GITHUB_CODEX_TOKEN",
-      "base_url": "https://api.githubcopilot.com"
+    "openai_codex": {
+      "oauth_token": "$OPENAI_CODEX_TOKEN",
+      "base_url": "https://api.openai.com/v1"
     },
-    "copilot": {
+    "github_copilot": {
       "cli_token": "$GITHUB_COPILOT_TOKEN",
       "base_url": "https://api.githubcopilot.com"
     }
@@ -257,7 +257,7 @@ Paralel:
 TELEGRAM_BOT_TOKEN=xxxxx
 OPENAI_API_KEY=sk-xxxxx
 OPENAI_BASE_URL=https://api.openai.com/v1
-GITHUB_CODEX_TOKEN=xxxxx
+OPENAI_CODEX_TOKEN=xxxxx
 GITHUB_COPILOT_TOKEN=xxxxx
 ```
 
@@ -270,15 +270,15 @@ GITHUB_COPILOT_TOKEN=xxxxx
 - `base_url` configurable → bisa arahkan ke Ollama, LM Studio, dll
 - `api_key` dari env
 
-### 5.2 GitHub Codex (OAuth)
+### 5.2 OpenAI Codex (OAuth)
 - Autentikasi via OAuth token
-- Endpoint: `https://api.githubcopilot.com`
+- Endpoint: `https://api.openai.com/v1`
 - Format response: OpenAI-compatible
 
 ### 5.3 GitHub Copilot (CLI token)
 - Token dari `gh auth token` atau `~/.config/gh/hosts.yml`
-- Endpoint sama dengan Codex
-- Fallback jika Codex tidak tersedia
+- Endpoint: `https://api.githubcopilot.com`
+- Format response: OpenAI-compatible
 
 **Provider swap** via `config.json → llm.provider` tanpa ubah code.
 
