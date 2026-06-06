@@ -75,6 +75,8 @@ def call_llm(cfg: AppConfig, messages: list, tools: list = None):
     
     # Menghapus reasoning leak (tag <think> atau <thought> beserta isinya)
     # Biasanya model reasoning seperti gemma atau deepseek membocorkan ini
-    content = re.sub(r'<(?:think|thought)>.*?</(?:think|thought)>', '', content, flags=re.DOTALL).strip()
+    content = re.sub(r'<(?:think|thought)>.*?</(?:think|thought)>', '', content, flags=re.DOTALL)
+    # Hapus tag pembuka atau penutup yang tertinggal
+    content = re.sub(r'</?(?:think|thought)>', '', content).strip()
     
     return {"type": "text", "content": content}

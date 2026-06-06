@@ -7,7 +7,11 @@ os.makedirs(WORKSPACE_DIR, exist_ok=True)
 
 def execute_bash(command: str) -> str:
     """Eksekusi bash command secara aman via bwrap."""
+    import logging
+    logger = logging.getLogger("idolhub.tools")
+    
     bwrap_cmd = wrap_bwrap(command, WORKSPACE_DIR, WORKSPACE_DIR)
+    logger.info(f"Executing sandbox command: {bwrap_cmd}")
     
     try:
         # Eksekusi dengan subprocess, timeout 30 detik
@@ -20,6 +24,7 @@ def execute_bash(command: str) -> str:
         )
         # Gabungkan stdout dan stderr
         output = result.stdout + result.stderr
+        logger.info(f"Sandbox output: {output}")
         if not output.strip():
             output = "Berhasil dieksekusi (Tidak ada output)."
         return output
