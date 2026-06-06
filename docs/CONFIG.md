@@ -162,7 +162,7 @@ Hanya provider yang dipilih di `llm.provider` yang aktif. Sisanya diabaikan.
 | Key | Type | Default | Keterangan |
 |---|---|---|---|
 | `api.enabled` | bool | `true` | Aktifkan REST API |
-| `api.host` | string | `"0.0.0.0"` | Bind host |
+| `api.host` | string | `"127.0.0.1"` | Bind host |
 | `api.port` | int | `8000` | Port |
 | `api.cors_origins` | string[] | `[]` | Allowed origins. Kosong = tidak ada CORS |
 

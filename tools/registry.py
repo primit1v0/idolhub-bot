@@ -1,5 +1,6 @@
 import os
 import subprocess
+import shlex
 from tools.sandbox import wrap_bwrap
 
 WORKSPACE_DIR = os.path.join(os.getcwd(), "workspace")
@@ -11,13 +12,13 @@ def execute_bash(command: str) -> str:
     logger = logging.getLogger("idolhub.tools")
     
     bwrap_cmd = wrap_bwrap(command, WORKSPACE_DIR, WORKSPACE_DIR)
-    logger.info(f"Executing sandbox command: {bwrap_cmd}")
+    logger.info(f"Executing sandbox command: {shlex.join(bwrap_cmd)}")
     
     try:
         # Eksekusi dengan subprocess, timeout 30 detik
-        result = subprocess.run(
+        result = subprocess.run(  # nosec
             bwrap_cmd, 
-            shell=True, 
+            shell=False, 
             text=True, 
             capture_output=True, 
             timeout=30

@@ -104,7 +104,7 @@
   "api": {
     "_doc": "FastAPI REST server — diaktifkan saat mode=api atau mode=all",
     "enabled": true,
-    "host": "0.0.0.0",
+    "host": "127.0.0.1",
     "port": 8000,
     "cors_origins": [],
     "_cors_origins_doc": "Kosong = tidak ada CORS. Contoh: ['http://localhost:3000', 'https://dashboard.idolhub.local']"

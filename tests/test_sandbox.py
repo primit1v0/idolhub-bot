@@ -8,26 +8,28 @@ def test_wrap_bwrap_formatting():
     cwd = "/tmp/fake_workspace/subdir"
     
     wrapped = wrap_bwrap(command, workspace, cwd)
+    import shlex
+    wrapped_str = shlex.join(wrapped)
     
     # Harus pakai bwrap
-    assert wrapped.startswith("bwrap --new-session")
+    assert wrapped_str.startswith("bwrap --new-session")
     
     # Harus punya mount point wajib
-    assert "--proc /proc" in wrapped
-    assert "--dev /dev" in wrapped
+    assert "--proc /proc" in wrapped_str
+    assert "--dev /dev" in wrapped_str
     
     # Harus mem-bind workspace rw
-    assert f"--bind {workspace} {workspace}" in wrapped
+    assert f"--bind {workspace} {workspace}" in wrapped_str
     
     # Harus men-tmpfs parent directory agar aman dari bocor path
     parent_dir = os.path.dirname(workspace)
-    assert f"--tmpfs {parent_dir}" in wrapped
+    assert f"--tmpfs {parent_dir}" in wrapped_str
     
     # Harus execute shell command di akhir
-    assert wrapped.endswith(f"-- sh -c 'ls -la'")
+    assert wrapped_str.endswith(f"-- sh -c 'ls -la'")
     
     # Chdir harus benar
-    assert f"--chdir {cwd}" in wrapped
+    assert f"--chdir {cwd}" in wrapped_str
 
 def test_wrap_bwrap_fallback_cwd():
     command = "pwd"
@@ -36,6 +38,8 @@ def test_wrap_bwrap_fallback_cwd():
     cwd = "/tmp/hack_the_system"
     
     wrapped = wrap_bwrap(command, workspace, cwd)
+    import shlex
+    wrapped_str = shlex.join(wrapped)
     
     # Sandbox harus memaksa CWD kembali ke workspace jika tidak match
-    assert f"--chdir {workspace}" in wrapped
+    assert f"--chdir {workspace}" in wrapped_str

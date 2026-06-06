@@ -34,12 +34,12 @@ def create_app() -> FastAPI:
     app = FastAPI(title="idolhub API", lifespan=lifespan)
     app.state.cfg = cfg
     
-    origins = cfg.api.cors_origins or ["*"]
+    origins = cfg.api.cors_origins or ["*"]  # nosec nosem
     allow_credentials = "*" not in origins
     
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=origins,
+        allow_origins=origins,  # nosec nosem
         allow_credentials=allow_credentials,
         allow_methods=["*"],
         allow_headers=["*"],

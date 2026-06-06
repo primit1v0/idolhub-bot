@@ -73,3 +73,8 @@ Thumbs.db
 .coverage
 htmlcov/
 .tox/
+
+# --- Custom local tools & runtime directories ---
+.audit-tools/
+workspace/
+

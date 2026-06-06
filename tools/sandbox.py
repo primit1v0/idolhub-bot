@@ -2,7 +2,7 @@ import shlex
 import os
 from pathlib import Path
 
-def wrap_bwrap(command: str, workspace: str, cwd: str) -> str:
+def wrap_bwrap(command: str, workspace: str, cwd: str) -> list[str]:
     """
     Membungkus command dalam bubblewrap sandbox (membutuhkan 'bwrap' terinstall di host).
     """
@@ -53,4 +53,5 @@ def wrap_bwrap(command: str, workspace: str, cwd: str) -> str:
         "--", "sh", "-c", command
     ]
 
-    return shlex.join(args)
+    return args
+

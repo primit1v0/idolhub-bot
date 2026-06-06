@@ -90,7 +90,7 @@ class PluginsSection(BaseModel):
 
 class ApiSection(BaseModel):
     enabled: bool = True
-    host: str = "0.0.0.0"
+    host: str = "127.0.0.1"
     port: int = 8000
     cors_origins: List[str] = Field(default_factory=list)
 
