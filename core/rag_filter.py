@@ -1,13 +1,29 @@
+import re
+import logging
+
+logger = logging.getLogger("idolhub.security")
+
 INJECTION_PATTERNS = [
-    "ignore previous", "ignore all", "forget everything",
-    "you are now", "act as", "pretend you",
-    "lupakan semua", "abaikan instruksi",
-    "kamu sekarang", "pura-pura",
+    r"ignore\s+previous",
+    r"ignore\s+all",
+    r"forget\s+everything",
+    r"you\s+are\s+now",
+    r"act\s+as",
+    r"pretend\s+you",
+    r"lupakan\s+semua",
+    r"abaikan\s+instruksi",
+    r"kamu\s+sekarang",
+    r"pura-pura\s+(?:menjadi|kamu|ialah|adalah)",
 ]
 
 def filter_query(query: str) -> dict:
+    if not isinstance(query, str):
+        return {"status": "ALLOWED"}
+
     query_lower = query.lower()
     for pattern in INJECTION_PATTERNS:
-        if pattern in query_lower:
+        if re.search(r"\b" + pattern + r"\b", query_lower):
+            logger.warning(f"Blocked prompt injection attempt matching pattern: '{pattern}'")
             return {"status": "BLOCKED", "reason": f"Prompt injection: {pattern}"}
     return {"status": "ALLOWED"}
+

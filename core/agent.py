@@ -139,16 +139,16 @@ class IdolhubAgent:
 
     async def run(self, user_id: str, user_input: str) -> str:
         """Run the agent asynchronously with the given user input."""
-        # Check prompt injection
-        filtered = filter_query(user_input)
-        if filtered["status"] == "BLOCKED":
-            return "Maaf, permintaan Anda tidak dapat diproses demi alasan keamanan."
-
         ctx = {"user_id": user_id, "user_input": user_input}
         await self.event_bus.emit("before_message", ctx)
         
         user_id = ctx.get("user_id", user_id)
         user_input = ctx.get("user_input", user_input)
+
+        # Check prompt injection
+        filtered = filter_query(user_input)
+        if filtered["status"] == "BLOCKED":
+            return "Maaf, permintaan Anda tidak dapat diproses demi alasan keamanan."
         
         history = await self.memory.get_history(user_id)
         
