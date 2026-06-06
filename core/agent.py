@@ -1,47 +1,138 @@
-from pocketflow import Node, Flow
+import json
+import inspect
+from pocketflow import AsyncNode, AsyncFlow
 from core.config import AppConfig
 from core.llm import call_llm
 from memory.sqlite_store import SqliteStore
 from tools.registry import TOOLS_SCHEMA, TOOLS_MAPPING
-import json
+from core.event_bus import EventBus
+from plugins.loader import load_plugins
+from skills.loader import load_skills
 
-class AnswerNode(Node):
+class AnswerNode(AsyncNode):
     def __init__(self, cfg: AppConfig):
-        super().__init__()
+        # Retry up to 3 times, with 1 second delay
+        super().__init__(max_retries=3, wait=1)
         self.cfg = cfg
 
-    def prep(self, shared: dict):
+    async def prep_async(self, shared: dict):
         return shared
 
-    def exec(self, shared: dict) -> dict:
+    async def exec_async(self, shared: dict) -> dict:
         messages = shared.get("messages", [])
-        result = call_llm(self.cfg, messages, tools=TOOLS_SCHEMA)
+        tools_schema = shared.get("tools_schema", [])
+        
+        if shared.get("iters", 0) >= self.cfg.agent.max_iterations:
+            return {"type": "error", "content": "Error: Too many iterations."}
+            
+        result = await call_llm(self.cfg, messages, tools=tools_schema)
         return result
 
-    def post(self, shared: dict, prep_res: dict, exec_res: dict):
+    async def post_async(self, shared: dict, prep_res: dict, exec_res: dict):
+        shared["iters"] = shared.get("iters", 0) + 1
         shared["llm_result"] = exec_res
+        
+        if exec_res.get("type") == "text":
+            shared["final_text"] = exec_res["content"]
+            return "done"
+        elif exec_res.get("type") == "error":
+            shared["final_text"] = exec_res["content"]
+            return "done"
+        elif exec_res.get("type") == "tool_calls":
+            return "tool_call"
+
+
+class ToolExecutionNode(AsyncNode):
+    def __init__(self, cfg: AppConfig, tools_mapping: dict, event_bus: EventBus):
+        super().__init__()
+        self.cfg = cfg
+        self.tools_mapping = tools_mapping
+        self.event_bus = event_bus
+
+    async def prep_async(self, shared: dict):
+        return shared
+
+    async def exec_async(self, shared: dict) -> dict:
+        llm_result = shared.get("llm_result", {})
+        messages = shared.get("messages", [])
+        user_id = shared.get("user_id")
+        
+        messages.append(llm_result["message_obj"])
+        
+        for tc in llm_result["calls"]:
+            func_name = tc.function.name
+            try:
+                args = json.loads(tc.function.arguments)
+            except Exception:
+                args = {}
+                
+            tool_ctx = {
+                "user_id": user_id,
+                "tool_name": func_name,
+                "tool_args": args,
+                "agent_context": messages
+            }
+            await self.event_bus.emit("on_tool_call", tool_ctx)
+            
+            if func_name in self.tools_mapping:
+                func_result = self.tools_mapping[func_name](**args)
+                if inspect.iscoroutine(func_result):
+                    func_result = await func_result
+            else:
+                func_result = f"Error: Tool {func_name} not found"
+                
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc.id,
+                "name": func_name,
+                "content": str(func_result)
+            })
+            
+        return shared
+
+    async def post_async(self, shared: dict, prep_res: dict, exec_res: dict):
+        return "default"
 
 
 class IdolhubAgent:
     def __init__(self, cfg: AppConfig):
         self.cfg = cfg
+        self.event_bus = EventBus()
+        self.tools_schema = list(TOOLS_SCHEMA)
+        self.tools_mapping = dict(TOOLS_MAPPING)
         self._build_flow()
 
     def _build_flow(self):
         """Build the PocketFlow execution graph."""
         self.answer_node = AnswerNode(self.cfg)
-        self.flow = Flow(start=self.answer_node)
+        self.tool_node = ToolExecutionNode(self.cfg, self.tools_mapping, self.event_bus)
+        
+        # Wire graph using PocketFlow custom transition operators
+        self.answer_node - "tool_call" >> self.tool_node
+        self.tool_node >> self.answer_node
+        
+        self.flow = AsyncFlow(start=self.answer_node)
 
     async def initialize(self):
         self.memory = SqliteStore(self.cfg)
         await self.memory.initialize()
+        
+        # Load Skills & Plugins
+        load_skills(self.cfg.skills.dir, self.cfg, self.tools_schema, self.tools_mapping)
+        load_plugins(self.cfg.plugins.dir, self.event_bus)
 
     async def close(self):
         if hasattr(self, 'memory') and self.memory:
             await self.memory.close()
 
     async def run(self, user_id: str, user_input: str) -> str:
-        """Run the agent with the given user input and memory context."""
+        """Run the agent asynchronously with the given user input."""
+        ctx = {"user_id": user_id, "user_input": user_input}
+        await self.event_bus.emit("before_message", ctx)
+        
+        user_id = ctx.get("user_id", user_id)
+        user_input = ctx.get("user_input", user_input)
+        
         history = await self.memory.get_history(user_id)
         
         messages = []
@@ -49,52 +140,31 @@ class IdolhubAgent:
             messages.append({"role": msg["role"], "content": msg["content"]})
         messages.append({"role": "user", "content": user_input})
         
-        # Simpan user msg
         await self.memory.add_message(user_id, "user", user_input)
         
-        max_iters = 5
-        iters = 0
-        final_text = ""
+        await self.event_bus.emit("after_message", ctx)
         
-        while iters < max_iters:
-            shared = {"messages": messages}
-            self.flow.run(shared)
+        shared = {
+            "messages": messages,
+            "tools_schema": self.tools_schema,
+            "user_id": user_id,
+            "iters": 0
+        }
+        
+        try:
+            await self.flow.run_async(shared)
+        except Exception as e:
+            ctx["error"] = e
+            await self.event_bus.emit("on_error", ctx)
+            raise e
             
-            result = shared.get("llm_result", {})
-            
-            if result.get("type") == "text":
-                final_text = result["content"]
-                break
-                
-            elif result.get("type") == "tool_calls":
-                msg_obj = result["message_obj"]
-                messages.append(msg_obj)
-                
-                # Jangan simpan detail tool calls ke memory jangka panjang karena merusak skema OpenAI
-                # cukup biarkan di dalam session saat ini (messages array).
-                
-                for tc in result["calls"]:
-                    func_name = tc.function.name
-                    try:
-                        args = json.loads(tc.function.arguments)
-                    except:
-                        args = {}
-                        
-                    if func_name in TOOLS_MAPPING:
-                        func_result = TOOLS_MAPPING[func_name](**args)
-                    else:
-                        func_result = f"Error: Tool {func_name} not found"
-                        
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tc.id,
-                        "name": func_name,
-                        "content": str(func_result)
-                    })
-            iters += 1
-            
-        if not final_text:
-            final_text = "Error: Too many iterations."
-            
+        final_text = shared.get("final_text", "Error: Too many iterations.")
+        
+        ctx["response"] = final_text
+        await self.event_bus.emit("before_reply", ctx)
+        final_text = ctx.get("response", final_text)
+        
         await self.memory.add_message(user_id, "assistant", final_text)
+        
+        await self.event_bus.emit("after_reply", ctx)
         return final_text
