@@ -77,5 +77,18 @@ Berikut adalah rincian tambahan fitur penyimpanan yang terinspirasi dari riset r
 * **Fungsi:** Menyimpan preferensi pengguna (seperti konfigurasi tampilan) dan fakta penting (seperti properti/entitas buatan pengguna) secara deterministik demi mencegah amnesia akibat context window jangka pendek yang terrotasi.
 * **Verifikasi:** Unit test baru di [tests/test_memory.py](file:///opt/idolhub/tests/test_memory.py) telah ditambahkan dan diverifikasi lulus pengujian (**pytest PASS**).
 
+### 2. Prompt Injection Input Gating (RAG Filter) — **[IMPLEMENTED]**
+* **Tambahan Fitur:** Diimplementasikan modul filter prompt injection di [core/rag_filter.py](file:///opt/idolhub/core/rag_filter.py) menggunakan regex word boundaries (`\b`), pengecekan tipe data input, dan logging warning jika ada indikasi injection. Filter dijalankan di [core/agent.py](file:///opt/idolhub/core/agent.py) setelah event `before_message` selesai diproses.
+* **Verifikasi:** Unit test terisolasi di [tests/test_rag_filter.py](file:///opt/idolhub/tests/test_rag_filter.py) dan uji alur event bus di [tests/test_agent.py](file:///opt/idolhub/tests/test_agent.py) telah ditambahkan dan lulus pengujian (**pytest PASS**).
+
+### 3. Memory Gating & Safe Writes — **[IMPLEMENTED]**
+* **Tambahan Fitur:** Diimplementasikan verifikasi keamanan penulisan memori di [memory/memory_gate.py](file:///opt/idolhub/memory/memory_gate.py). Menolak perintah penulisan jika tidak mengandung kata kunci persetujuan eksplisit (`SIMPAN KE MEMORI` / `SAVE TO MEMORY`) atau jika mengandung perintah berbahaya (seperti `rm`, `execute`, `curl`).
+* **Verifikasi:** Terintegrasi pada tools `save_fact` dan `set_preference` di [tools/registry.py](file:///opt/idolhub/tools/registry.py) dengan injeksi tanda tangan otomatis `user_input`. Unit test ditambahkan dan diverifikasi lulus pengujian (**pytest PASS**).
+
+### 4. Reciprocal Rank Fusion (RRF) Merger — **[IMPLEMENTED]**
+* **Tambahan Fitur:** Menggabungkan pencarian fakta EAV dan riwayat pesan FTS5 menggunakan skema penilaian Reciprocal Rank Fusion (RRF) di [core/agent.py](file:///opt/idolhub/core/agent.py) ke dalam satu system message prompt yang teratur.
+* **Verifikasi:** Uji coba RRF merger di [tests/test_agent.py](file:///opt/idolhub/tests/test_agent.py) berhasil diverifikasi dan lulus pengujian (**pytest PASS**).
+
 ---
 *Laporan ini diperbarui secara otomatis setelah keberhasilan audit ulang siklus penambahan fitur memori.*
+
