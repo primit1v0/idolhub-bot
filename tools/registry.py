@@ -2,6 +2,7 @@ import os
 import subprocess
 import shlex
 from tools.sandbox import wrap_bwrap
+from memory.memory_gate import gate_write
 
 WORKSPACE_DIR = os.path.join(os.getcwd(), "workspace")
 os.makedirs(WORKSPACE_DIR, exist_ok=True)
@@ -34,13 +35,21 @@ def execute_bash(command: str) -> str:
     except Exception as e:
         return f"ERROR Internal: {e}"
 
-async def save_fact(entity: str, nilai: str, user_id: str, memory) -> str:
-    """Menyimpan fakta pengguna."""
+async def save_fact(entity: str, nilai: str, user_id: str, memory, user_input: str = "") -> str:
+    """Menyimpan fakta pengguna dengan verifikasi keamanan."""
+    gate_res = gate_write(f"{entity}: {nilai}", user_input)
+    if gate_res["status"] == "REJECTED":
+        return f"GATING ERROR: REJECTED - {gate_res['reason']}"
+        
     fact_id = await memory.save_fakta(user_id, entity, nilai)
     return f"Fakta berhasil disimpan (ID: {fact_id})."
 
-async def set_preference(kunci: str, nilai: str, user_id: str, memory) -> str:
-    """Menyimpan preferensi pengguna."""
+async def set_preference(kunci: str, nilai: str, user_id: str, memory, user_input: str = "") -> str:
+    """Menyimpan preferensi pengguna dengan verifikasi keamanan."""
+    gate_res = gate_write(f"{kunci}: {nilai}", user_input)
+    if gate_res["status"] == "REJECTED":
+        return f"GATING ERROR: REJECTED - {gate_res['reason']}"
+        
     await memory.set_preferensi(user_id, kunci, nilai)
     return f"Preferensi {kunci} berhasil diset menjadi {nilai}."
 

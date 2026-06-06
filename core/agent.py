@@ -59,6 +59,7 @@ class ToolExecutionNode(AsyncNode):
         llm_result = shared.get("llm_result", {})
         messages = shared.get("messages", [])
         user_id = shared.get("user_id")
+        user_input = shared.get("user_input", "")
         
         messages.append(llm_result["message_obj"])
         
@@ -85,6 +86,8 @@ class ToolExecutionNode(AsyncNode):
                     extra_args["user_id"] = user_id
                 if "memory" in sig.parameters:
                     extra_args["memory"] = self.memory
+                if "user_input" in sig.parameters:
+                    extra_args["user_input"] = user_input
                 
                 func_result = func(**{**args, **extra_args})
                 if inspect.iscoroutine(func_result):
@@ -157,7 +160,7 @@ class IdolhubAgent:
             messages.append({"role": msg["role"], "content": msg["content"]})
         messages.append({"role": "user", "content": user_input})
         
-        # Retrieve facts and score them
+        # 1. Retrieve & Rank Facts
         facts = await self.memory.get_fakta(user_id, limit=30)
         query_words = set(re.findall(r'[a-zA-Z0-9]+', user_input.lower()))
         scored_facts = []
@@ -172,20 +175,29 @@ class IdolhubAgent:
                 score = (0.5 * sim_score) + (0.3 * rec_score) + (0.2 * conf_score)
                 scored_facts.append((score, fact))
         scored_facts.sort(key=lambda x: x[0], reverse=True)
-        relevant_facts = [item[1] for item in scored_facts[:3]]
         
-        if relevant_facts:
-            facts_md = "Relevant facts:\n" + "\n".join(f"- {f['entity']}: {f['nilai']}" for f in relevant_facts)
-            messages.insert(0, {"role": "system", "content": facts_md})
-            
-        # Retrieve FTS5 matching messages
+        # 2. Retrieve FTS5 matching messages
         fts_messages = await self.memory.search_history_fts(user_id, user_input, limit=3)
         recent_contents = [m["content"] for m in messages[-4:]] if len(messages) >= 4 else [m["content"] for m in messages]
         unique_fts = [m for m in fts_messages if m["content"] not in recent_contents]
+
+        # 3. Reciprocal Rank Fusion (RRF) Merger
+        # We assign rank score = 1 / (60 + rank)
+        rrf_items = []
+        for rank, (_, fact) in enumerate(scored_facts):
+            score = 1.0 / (60.0 + rank)
+            rrf_items.append((score, f"Fakta: {fact['entity']} -> {fact['nilai']}"))
+        for rank, msg in enumerate(unique_fts):
+            score = 1.0 / (60.0 + rank)
+            rrf_items.append((score, f"Pesan lampau ({msg['role']}): {msg['content']}"))
+            
+        # Sort combined by RRF score DESC and limit to top 3
+        rrf_items.sort(key=lambda x: x[0], reverse=True)
+        top_rrf = [item[1] for item in rrf_items[:3]]
         
-        if unique_fts:
-            fts_md = "Relevant past conversations:\n" + "\n".join(f"- {m['role']}: {m['content']}" for m in unique_fts)
-            messages.insert(0, {"role": "system", "content": fts_md})
+        if top_rrf:
+            rrf_md = "Relevant context (RRF ranked):\n" + "\n".join(f"- {item}" for item in top_rrf)
+            messages.insert(0, {"role": "system", "content": rrf_md})
         
         await self.memory.add_message(user_id, "user", user_input)
         
@@ -195,6 +207,7 @@ class IdolhubAgent:
             "messages": messages,
             "tools_schema": self.tools_schema,
             "user_id": user_id,
+            "user_input": user_input,
             "iters": 0
         }
         
