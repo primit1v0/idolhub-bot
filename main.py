@@ -1,35 +1,58 @@
-#!/usr/bin/env python3
-"""
-idolhub — Personal Assistant Entry Point
-Usage:
-  python main.py          # default: bot mode
-  python main.py bot      # Telegram bot
-  python main.py api      # FastAPI REST server
-  python main.py mcp      # MCP server
-"""
-
 import sys
-import asyncio
+import logging
 from core.config import load_config
+from core.bot import TelegramBot
 
+def setup_logging(level_str: str, format_str: str):
+    numeric_level = getattr(logging, level_str.upper(), logging.INFO)
+    
+    if format_str.lower() == "json":
+        # Simplified JSON logging for systemd
+        log_format = '{"time": "%(asctime)s", "level": "%(levelname)s", "msg": "%(message)s"}'
+    else:
+        log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+
+    logging.basicConfig(
+        format=log_format,
+        level=numeric_level
+    )
+    # Reduce noise from httpx
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
 def main():
-    config = load_config()
-    mode = sys.argv[1] if len(sys.argv) > 1 else config.app.mode
-
-    if mode == "bot":
-        from core.bot import start_bot
-        asyncio.run(start_bot(config))
-    elif mode == "api":
-        from api.server import start_api
-        start_api(config)
-    elif mode == "mcp":
-        from mcp.server import start_mcp
-        asyncio.run(start_mcp(config))
-    else:
-        print(f"Unknown mode: {mode}. Use: bot | api | mcp")
+    # 1. Load Config & Resolve Env (Fail-fast jika ada yang kurang)
+    try:
+        cfg = load_config("config.json")
+    except KeyError as e:
+        print(f"CRITICAL ERROR: Secret untuk {e} tidak ditemukan di environment!")
+        print("Pastikan /etc/idolhub/secrets.env sudah diisi dan di-export.")
+        sys.exit(1)
+    except Exception as e:
+        print(f"CRITICAL ERROR: Gagal memuat config: {e}")
         sys.exit(1)
 
+    # 2. Setup Logging
+    setup_logging(cfg.logging.level, cfg.logging.format)
+    logger = logging.getLogger("idolhub")
+    
+    mode = cfg.app.mode
+    logger.info(f"Memulai idolhub dalam mode: {mode.upper()}")
+
+    # 3. Dispatch Mode
+    if mode == "bot":
+        try:
+            bot = TelegramBot(cfg)
+            bot.run()
+        except ValueError as e:
+            logger.error(f"Setup Error: {e}")
+            sys.exit(1)
+    elif mode == "api":
+        logger.error("Mode API belum diimplementasikan di Phase 1.")
+    elif mode == "mcp":
+        logger.error("Mode MCP belum diimplementasikan di Phase 1.")
+    else:
+        logger.error(f"Mode tidak dikenal: {mode}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
