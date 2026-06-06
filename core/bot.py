@@ -16,7 +16,13 @@ class TelegramBot:
         if not self.cfg.telegram.token or "$" in self.cfg.telegram.token:
             raise ValueError("Token Telegram belum disetting dengan benar di environment!")
 
-        self.app = ApplicationBuilder().token(self.cfg.telegram.token).post_init(self._post_init).build()
+        self.app = (
+            ApplicationBuilder()
+            .token(self.cfg.telegram.token)
+            .post_init(self._post_init)
+            .post_stop(self._post_stop)
+            .build()
+        )
 
         # Daftarkan handlers
         self.app.add_handler(CommandHandler("start", self._start_handler))
@@ -25,6 +31,10 @@ class TelegramBot:
     async def _post_init(self, application):
         """Dipanggil setelah bot terinisiasi, untuk setup async memory."""
         await self.agent.initialize()
+
+    async def _post_stop(self, application):
+        """Dipanggil saat bot dimatikan, untuk menutup koneksi database dengan aman."""
+        await self.agent.close()
 
     def _is_allowed(self, user_id: int) -> bool:
         """Cek apakah user diizinkan mengakses bot (whitelist)."""
