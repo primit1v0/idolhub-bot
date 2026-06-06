@@ -19,7 +19,19 @@ def wrap_bwrap(command: str, workspace: str, cwd: str) -> str:
     optional = ["/bin", "/lib", "/lib64", "/etc/alternatives", 
                 "/etc/ssl/certs", "/etc/resolv.conf", "/etc/ld.so.cache"]
 
-    args = ["bwrap", "--new-session", "--die-with-parent", "--unshare-all", "--share-net"]
+    args = [
+        "bwrap", 
+        "--new-session", 
+        "--die-with-parent", 
+        "--unshare-all", 
+        "--share-net",
+        "--clearenv",
+        "--setenv", "PATH", "/usr/local/bin:/usr/bin:/bin",
+        "--setenv", "HOME", str(ws),
+        "--setenv", "USER", "sandbox",
+        "--setenv", "LOGNAME", "sandbox",
+        "--setenv", "SHELL", "/bin/sh",
+    ]
     
     for p in required:
         args += ["--ro-bind", p, p]
