@@ -1,0 +1,22 @@
+[Unit]
+Description=idolhub MCP stdio Server
+Documentation=https://github.com/primit1v0/idolhub-bot
+After=network.target
+
+[Service]
+Type=simple
+User=sandi
+WorkingDirectory=/opt/idolhub
+EnvironmentFile=/etc/idolhub/idolhub.env
+ExecStart=/opt/idolhub/.venv/bin/python main.py mcp
+Restart=on-failure
+RestartSec=5
+StartLimitInterval=60
+StartLimitBurst=3
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=idolhub-mcp
+
+[Install]
+WantedBy=default.target
