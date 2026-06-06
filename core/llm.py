@@ -1,0 +1,58 @@
+from openai import OpenAI
+from core.config import AppConfig
+
+def get_llm_client(cfg: AppConfig) -> OpenAI:
+    """
+    Mengembalikan instance OpenAI-compatible client berdasarkan provider yang dipilih di config.
+    Credentials diambil dari cfg.providers[provider].
+    """
+    provider_name = cfg.llm.provider
+    
+    if provider_name not in cfg.providers:
+        raise ValueError(f"Provider '{provider_name}' tidak ditemukan di konfigurasi 'providers'")
+        
+    provider_cfg = cfg.providers[provider_name]
+    
+    base_url = provider_cfg.base_url
+    api_key = None
+    
+    # Resolve API Key based on provider type
+    if provider_name == "openai":
+        api_key = provider_cfg.api_key
+    elif provider_name == "openai_codex":
+        api_key = provider_cfg.oauth_token
+    elif provider_name == "github_copilot":
+        api_key = provider_cfg.cli_token
+    else:
+        # Fallback for custom providers using generic api_key
+        api_key = provider_cfg.api_key
+        
+    if not api_key:
+        raise ValueError(f"Tidak ada API Key / Token yang valid untuk provider '{provider_name}'")
+
+    return OpenAI(
+        base_url=base_url,
+        api_key=api_key,
+        timeout=cfg.llm.timeout,
+        max_retries=2
+    )
+
+def call_llm(cfg: AppConfig, messages: list) -> str:
+    """
+    Helper function untuk memanggil LLM dengan menginjeksi system prompt dari agent config.
+    """
+    client = get_llm_client(cfg)
+    
+    full_messages = [
+        {"role": "system", "content": cfg.agent.system_prompt},
+        *messages
+    ]
+    
+    response = client.chat.completions.create(
+        model=cfg.llm.model,
+        messages=full_messages,
+        temperature=cfg.llm.temperature,
+        max_tokens=cfg.llm.max_tokens,
+    )
+    
+    return response.choices[0].message.content
