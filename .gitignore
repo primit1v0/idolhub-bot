@@ -1,0 +1,75 @@
+# =============================================================================
+# idolhub — .gitignore
+# Secrets WAJIB di luar project (/etc/idolhub/secrets.env via systemd)
+# =============================================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+MANIFEST
+
+# --- Virtual environment (uv) ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- uv.lock: DI-COMMIT untuk reproducible builds ---
+# uv.lock  ← jangan uncomment ini
+
+# --- Secrets & environment ---
+# .env TIDAK BOLEH ada di sini — inject via systemd EnvironmentFile
+.env
+*.env
+secrets.env
+*.secret
+*.pem
+*.key
+*.p12
+
+# --- Runtime data ---
+data/
+*.db
+*.sqlite
+*.sqlite3
+chroma/
+*.faiss
+
+# --- Logs ---
+logs/
+*.log
+*.log.*
+
+# --- Config override lokal (bukan config.json utama) ---
+config.local.json
+config.override.json
+
+# --- IDE & editor ---
+.vscode/
+.idea/
+.cursor/
+*.swp
+*.swo
+*~
+
+# --- OS ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V7
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# --- Testing ---
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/

@@ -1,0 +1,48 @@
+{
+  "_comment": "Copy ke config.json dan isi nilai $VAR di /etc/idolhub/secrets.env",
+  "app": {
+    "name": "idolhub",
+    "mode": "bot",
+    "debug": false
+  },
+  "telegram": {
+    "token": "$TELEGRAM_BOT_TOKEN"
+  },
+  "llm": {
+    "provider": "openai",
+    "base_url": "$OPENAI_BASE_URL",
+    "api_key": "$OPENAI_API_KEY",
+    "model": "gpt-4o",
+    "temperature": 0.7,
+    "max_tokens": 4096
+  },
+  "providers": {
+    "codex": {
+      "oauth_token": "$GITHUB_CODEX_TOKEN",
+      "base_url": "https://api.githubcopilot.com"
+    },
+    "copilot": {
+      "cli_token": "$GITHUB_COPILOT_TOKEN",
+      "base_url": "https://api.githubcopilot.com"
+    }
+  },
+  "memory": {
+    "short_term": "sqlite",
+    "long_term": "chroma",
+    "sqlite_path": "./data/memory.db",
+    "chroma_path": "./data/chroma",
+    "max_history": 50
+  },
+  "api": {
+    "enabled": true,
+    "host": "0.0.0.0",
+    "port": 8000
+  },
+  "mcp": {
+    "enabled": true,
+    "port": 8001
+  },
+  "skills_dir": "./skills",
+  "tools_dir": "./tools",
+  "plugins_dir": "./plugins"
+}
