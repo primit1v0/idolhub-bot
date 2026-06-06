@@ -110,54 +110,47 @@ idolhub/
 ├── .gitignore
 │
 ├── systemd/
-│   └── idolhub.service.template  # systemd unit template
+│   ├── idolhub.service.template      # systemd bot unit template
+│   ├── idolhub-api.service.template  # systemd API unit template
+│   └── idolhub-mcp.service.template  # systemd MCP unit template
 ├── scripts/
-│   └── setup.sh                  # Setup helper (buat /etc/idolhub/)
+│   └── setup.sh                      # Setup helper (buat /etc/idolhub/)
 │
 ├── core/
-│   ├── bot.py                  # Telegram handler (python-telegram-bot)
-│   ├── agent.py                # PocketFlow agent flow
-│   ├── memory.py               # Memory manager (short + long term)
-│   ├── llm.py                  # LLM abstraction layer
-│   ├── config.py               # $VAR resolver dari os.environ
-│   └── event_bus.py            # Hook/event system
+│   ├── bot.py                        # Telegram handler (python-telegram-bot)
+│   ├── agent.py                      # PocketFlow agent flow (Async graph)
+│   ├── llm.py                        # LLM abstraction layer (AsyncOpenAI client)
+│   ├── config.py                     # $VAR resolver dari os.environ
+│   └── event_bus.py                  # Hook/event bus system (Async/Sync)
 │
 ├── providers/
-│   ├── openai_provider.py      # OpenAI / OpenAI-compatible
-│   ├── openai_codex_provider.py # OpenAI Codex via OAuth
-│   └── github_copilot_provider.py # GitHub Copilot via CLI auth token
+│   └── __init__.py                   # Provider adapters resolved in core/llm.py
 │
-├── skills/                     # OpenClaw/Hermes-compatible skills
-│   ├── loader.py               # Auto-discover skills dari folder
-│   ├── web_search.md
-│   └── summarize.md
+├── skills/                           # OpenClaw/Hermes-compatible skills
+│   └── loader.py                     # Auto-discover and parse markdown skills
 │
 ├── tools/
-│   ├── registry.py             # Tool registry + auto-discover
-│   ├── search.py               # DuckDuckGo / Serper
-│   └── calculator.py
+│   ├── registry.py                   # Tool registry + auto-discover
+│   └── sandbox.py                    # Bubblewrap sandbox execution wrapper
 │
 ├── plugins/
-│   ├── loader.py               # Plugin auto-loader
-│   └── logger.py               # Log semua interaksi
+│   └── loader.py                     # Dynamic plugins auto-loader
 │
 ├── memory/
-│   ├── sqlite_store.py         # Short-term: conversation history
-│   └── vector_store.py         # Long-term: ChromaDB semantic memory
+│   └── sqlite_store.py               # Short-term: conversation history (SQLite)
 │
 ├── api/
-│   ├── server.py               # FastAPI app
+│   ├── server.py                     # FastAPI REST app
 │   └── routes/
-│       ├── chat.py             # POST /chat
-│       ├── health.py           # GET /health
-│       └── config.py           # GET/POST /config
+│       ├── chat.py                   # POST /chat
+│       ├── health.py                 # GET /health
+│       └── config.py                 # GET/POST /config
 │
-├── mcp/
-│   ├── server.py               # MCP-compliant server
-│   └── handlers.py             # Tool handlers via MCP protocol
+├── mcp_server/
+│   └── server.py                     # FastMCP stdio server
 │
 └── dashboard/
-    └── README.md               # Placeholder WebUI (fase berikutnya)
+    └── README.md                     # Placeholder WebUI (fase berikutnya)
 ```
 
 ### 3.2 Data Flow
