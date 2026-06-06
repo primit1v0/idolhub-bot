@@ -16,11 +16,15 @@ class TelegramBot:
         if not self.cfg.telegram.token or "$" in self.cfg.telegram.token:
             raise ValueError("Token Telegram belum disetting dengan benar di environment!")
 
-        self.app = ApplicationBuilder().token(self.cfg.telegram.token).build()
+        self.app = ApplicationBuilder().token(self.cfg.telegram.token).post_init(self._post_init).build()
 
         # Daftarkan handlers
         self.app.add_handler(CommandHandler("start", self._start_handler))
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self._message_handler))
+
+    async def _post_init(self, application):
+        """Dipanggil setelah bot terinisiasi, untuk setup async memory."""
+        await self.agent.initialize()
 
     def _is_allowed(self, user_id: int) -> bool:
         """Cek apakah user diizinkan mengakses bot (whitelist)."""
@@ -56,8 +60,8 @@ class TelegramBot:
         await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
 
         try:
-            # 1. Masukkan ke PocketFlow Agent
-            response = self.agent.run(user_input=user_text)
+            # 1. Masukkan ke PocketFlow Agent dengan memory context
+            response = await self.agent.run(user_id=str(user.id), user_input=user_text)
             
             # 2. Kirim balasan ke user
             await update.message.reply_text(
