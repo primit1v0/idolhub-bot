@@ -26,7 +26,7 @@ SyslogIdentifier=idolhub
 
 # Security hardening
 # NoNewPrivileges=true (Dinonaktifkan agar bwrap setuid bisa jalan)
-PrivateTmp=true
+# PrivateTmp=true (Dinonaktifkan agar bwrap bisa melakukan mounting di luar namespace terisolasi)
 
 [Install]
 WantedBy=default.target
