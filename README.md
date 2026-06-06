@@ -27,12 +27,13 @@
 | | Fitur | Keterangan |
 |---|---|---|
 | 🤖 | **Telegram Bot** | Chat natural, search web, jalankan tools |
-| 🧠 | **Dual Memory** | Short-term SQLite + long-term sqlite-vec *(optional, Phase 2)* |
+| 🧠 | **Dual Memory (RRF)** | SQLite history (Jaccard deduplicated) + EAV Facts & Preference Store, terintegrasi via Reciprocal Rank Fusion (RRF) |
+| 🛡️ | **Gating & Security** | Prompt Injection Filter (RAG Filter) + Memory Gating (Safe Writes) untuk keamanan memori |
 | 🔌 | **Plugin-First** | Skill/tool/plugin di-drop ke folder, auto-loaded tanpa ubah core |
-| 📡 | **REST API** | FastAPI endpoint untuk integrasi eksternal |
+| 📡 | **REST API** | FastAPI endpoint dengan integrasi dynamic resource heartbeat monitor |
 | 🔁 | **MCP Server** | Compatible dengan Claude Desktop, Cursor, Windsurf |
 | 🔐 | **Secrets Aman** | Tidak pernah ada di folder project — inject via systemd |
-| ⚡ | **LLM Providers** | OpenAI-compatible, GitHub Codex OAuth, GitHub Copilot CLI |
+| ⚡ | **LLM Providers** | OpenAI-compatible, Gemini/Gemma, GitHub Codex OAuth, GitHub Copilot CLI |
 
 ---
 
@@ -110,11 +111,12 @@ idolhub/
 │
 ├── core/                     # Engine — stabil, jarang disentuh
 │   ├── bot.py                # Telegram handler
-│   ├── agent.py              # PocketFlow agent flow
+│   ├── agent.py              # PocketFlow agent flow (RRF context injection)
 │   ├── memory.py             # Memory manager (short + long term)
 │   ├── llm.py                # LLM abstraction layer
 │   ├── config.py             # $VAR resolver (stdlib os.environ)
-│   └── event_bus.py          # Hook/event lifecycle system
+│   ├── event_bus.py          # Hook/event lifecycle system
+│   └── rag_filter.py         # Prompt injection filter (regex word boundaries)
 │
 ├── providers/                # LLM provider adapters (swap via config)
 │   ├── openai_provider.py    # OpenAI / OpenAI-compatible
@@ -123,10 +125,13 @@ idolhub/
 │
 ├── skills/                   # OpenClaw/Hermes-compatible (.md)
 ├── tools/                    # Tool implementations (.py, auto-discovered)
+│   └── heartbeat.py          # Zero-dependency system resource monitor
+│
 ├── plugins/                  # Hooks & plugins (.py, auto-loaded)
 │
 ├── memory/
-│   ├── sqlite_store.py       # Short-term: conversation history
+│   ├── sqlite_store.py       # SQLite store: conversation history & EAV facts
+│   ├── memory_gate.py        # Memory gating validation (explicit consent)
 │   └── vector_store.py       # Long-term: sqlite-vec [optional, Phase 2]
 │
 ├── api/                      # FastAPI REST
@@ -236,9 +241,9 @@ Jika tidak lulus minimal 2 → jangan tambah.
 | Phase | Status | Scope |
 |---|---|---|
 | **Phase 1** | ✅ Completed | Core bot · agent · memory · providers · skill/tool/plugin system |
-| **Phase 2** | 🚧 In Progress | FastAPI REST · MCP server · sqlite-vec memory |
+| **Phase 2** | ✅ Completed | FastAPI REST · MCP server · SQLite EAV memory (Jaccard, FTS5, RRF) · Heartbeat monitor & Security Gating |
 | **Phase 3** | 📋 Planned | WebUI Dashboard (config + monitoring) |
-| **Phase 4** | 💡 Future | Voice · advanced RAG · multi-agent |
+| **Phase 4** | 💡 Future | Voice · advanced RAG · sqlite-vec long-term memory |
 
 ---
 
