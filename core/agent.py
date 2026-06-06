@@ -2,7 +2,8 @@ from pocketflow import Node, Flow
 from core.config import AppConfig
 from core.llm import call_llm
 from memory.sqlite_store import SqliteStore
-from core.llm import call_llm
+from tools.registry import TOOLS_SCHEMA, TOOLS_MAPPING
+import json
 
 class AnswerNode(Node):
     def __init__(self, cfg: AppConfig):
@@ -10,14 +11,15 @@ class AnswerNode(Node):
         self.cfg = cfg
 
     def prep(self, shared: dict):
-        return shared.get("messages", [])
+        return shared
 
-    def exec(self, messages: list) -> str:
-        response = call_llm(self.cfg, messages)
-        return response
+    def exec(self, shared: dict) -> dict:
+        messages = shared.get("messages", [])
+        result = call_llm(self.cfg, messages, tools=TOOLS_SCHEMA)
+        return result
 
-    def post(self, shared: dict, prep_res: list, exec_res: str):
-        shared["response"] = exec_res
+    def post(self, shared: dict, prep_res: dict, exec_res: dict):
+        shared["llm_result"] = exec_res
 
 
 class IdolhubAgent:
@@ -47,11 +49,49 @@ class IdolhubAgent:
             messages.append({"role": msg["role"], "content": msg["content"]})
         messages.append({"role": "user", "content": user_input})
         
-        shared = {"messages": messages}
-        self.flow.run(shared)
-        response = shared.get("response", "")
-        
+        # Simpan user msg
         await self.memory.add_message(user_id, "user", user_input)
-        await self.memory.add_message(user_id, "assistant", response)
         
-        return response
+        max_iters = 5
+        iters = 0
+        final_text = ""
+        
+        while iters < max_iters:
+            shared = {"messages": messages}
+            self.flow.run(shared)
+            
+            result = shared.get("llm_result", {})
+            
+            if result.get("type") == "text":
+                final_text = result["content"]
+                break
+                
+            elif result.get("type") == "tool_calls":
+                msg_obj = result["message_obj"]
+                messages.append(msg_obj)
+                
+                for tc in result["calls"]:
+                    func_name = tc.function.name
+                    try:
+                        args = json.loads(tc.function.arguments)
+                    except:
+                        args = {}
+                        
+                    if func_name in TOOLS_MAPPING:
+                        func_result = TOOLS_MAPPING[func_name](**args)
+                    else:
+                        func_result = f"Error: Tool {func_name} not found"
+                        
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "name": func_name,
+                        "content": str(func_result)
+                    })
+            iters += 1
+            
+        if not final_text:
+            final_text = "Error: Too many iterations."
+            
+        await self.memory.add_message(user_id, "assistant", final_text)
+        return final_text

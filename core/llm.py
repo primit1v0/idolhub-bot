@@ -37,7 +37,7 @@ def get_llm_client(cfg: AppConfig) -> OpenAI:
         max_retries=2
     )
 
-def call_llm(cfg: AppConfig, messages: list) -> str:
+def call_llm(cfg: AppConfig, messages: list, tools: list = None):
     """
     Helper function untuk memanggil LLM dengan menginjeksi system prompt dari agent config.
     """
@@ -50,17 +50,31 @@ def call_llm(cfg: AppConfig, messages: list) -> str:
     
     import re
     
-    response = client.chat.completions.create(
-        model=cfg.llm.model,
-        messages=full_messages,
-        temperature=cfg.llm.temperature,
-        max_tokens=cfg.llm.max_tokens,
-    )
+    kwargs = {
+        "model": cfg.llm.model,
+        "messages": full_messages,
+        "temperature": cfg.llm.temperature,
+        "max_tokens": cfg.llm.max_tokens,
+    }
+    if tools:
+        kwargs["tools"] = tools
+
+    response = client.chat.completions.create(**kwargs)
     
-    content = response.choices[0].message.content or ""
+    msg = response.choices[0].message
+    
+    if msg.tool_calls:
+        # Convert ke dict agar aman saat dikembalikan ke messages array
+        return {
+            "type": "tool_calls", 
+            "calls": msg.tool_calls, 
+            "message_obj": msg.model_dump(exclude_none=True)
+        }
+    
+    content = msg.content or ""
     
     # Menghapus reasoning leak (tag <think> atau <thought> beserta isinya)
     # Biasanya model reasoning seperti gemma atau deepseek membocorkan ini
     content = re.sub(r'<(?:think|thought)>.*?</(?:think|thought)>', '', content, flags=re.DOTALL).strip()
     
-    return content
+    return {"type": "text", "content": content}
