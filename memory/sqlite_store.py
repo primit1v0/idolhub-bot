@@ -1,7 +1,18 @@
 import aiosqlite
 import os
+import re
 from typing import List, Dict
 from core.config import AppConfig
+
+def calculate_jaccard(text1: str, text2: str) -> float:
+    words1 = set(re.findall(r'[a-zA-Z0-9]+', text1.lower()))
+    words2 = set(re.findall(r'[a-zA-Z0-9]+', text2.lower()))
+    if not words1 and not words2:
+        return 1.0
+    if not words1 or not words2:
+        return 0.0
+    return len(words1.intersection(words2)) / len(words1.union(words2))
+
 
 class SqliteStore:
     """
@@ -58,7 +69,22 @@ class SqliteStore:
         await self.db.commit()
 
     async def add_message(self, user_id: str, role: str, content: str):
-        """Menambah pesan ke database untuk user tertentu."""
+        """Menambah pesan ke database untuk user tertentu dengan deduplikasi."""
+        # Cek pesan terakhir dari user & role yang sama
+        query = '''
+            SELECT content FROM messages 
+            WHERE user_id = ? AND role = ?
+            ORDER BY timestamp DESC, id DESC LIMIT 1
+        '''
+        async with self.db.execute(query, (str(user_id), role)) as cursor:
+            row = await cursor.fetchone()
+            
+        if row:
+            last_content = row[0]
+            if calculate_jaccard(content, last_content) > 0.8:
+                # Lewati insert jika sangat mirip
+                return
+
         await self.db.execute(
             'INSERT INTO messages (user_id, role, content) VALUES (?, ?, ?)',
             (str(user_id), role, content)

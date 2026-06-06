@@ -129,3 +129,42 @@ async def test_memory_preferences(memory_store):
     assert val_default == "id"
 
 
+@pytest.mark.asyncio
+async def test_jaccard_deduplication(tmp_path):
+    from memory.sqlite_store import SqliteStore, calculate_jaccard
+    cfg = AppConfig.model_validate({
+        "app": {"name": "test", "mode": "bot"},
+        "telegram": {"token": "test"},
+        "agent": {"system_prompt": "test", "max_iterations": 3},
+        "llm": {"provider": "openai", "model": "gpt-4"},
+        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": str(tmp_path / "test.db")}, "long_term": {"backend": "none", "path": ""}},
+        "skills": {"dir": "./skills"},
+        "tools": {"dir": "./tools"},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "mcp": {"enabled": False},
+        "logging": {"level": "INFO"}
+    })
+    store = SqliteStore(cfg)
+    await store.initialize()
+    
+    # Test Jaccard calculations
+    assert calculate_jaccard("Saya naik motor hitam", "Saya naik motor hitam") == 1.0
+    assert calculate_jaccard("Saya naik motor hitam", "Saya mengendarai motor hitam") > 0.5
+    assert calculate_jaccard("Halo apa kabar", "Pagi dunia") == 0.0
+
+    # Add first message
+    await store.add_message("user_123", "user", "Saya ingin membeli sepeda baru")
+    history1 = await store.get_history("user_123")
+    assert len(history1) == 1
+    
+    # Add highly similar message
+    await store.add_message("user_123", "user", "Saya ingin membeli sepeda baru!")
+    history2 = await store.get_history("user_123")
+    # Length should still be 1 because it is deduplicated
+    assert len(history2) == 1
+    await store.close()
+
+
+
