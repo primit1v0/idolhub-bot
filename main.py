@@ -35,10 +35,15 @@ def main():
     setup_logging(cfg.logging.level, cfg.logging.format)
     logger = logging.getLogger("idolhub")
     
-    mode = cfg.app.mode
+    # 3. Determine Mode (CLI overrides config)
+    if len(sys.argv) > 1:
+        mode = sys.argv[1].lower()
+    else:
+        mode = cfg.app.mode
+        
     logger.info(f"Memulai idolhub dalam mode: {mode.upper()}")
 
-    # 3. Dispatch Mode
+    # 4. Dispatch Mode
     if mode == "bot":
         try:
             bot = TelegramBot(cfg)
@@ -47,9 +52,13 @@ def main():
             logger.error(f"Setup Error: {e}")
             sys.exit(1)
     elif mode == "api":
-        logger.error("Mode API belum diimplementasikan di Phase 1.")
+        import uvicorn
+        logger.info(f"Starting FastAPI server on {cfg.api.host}:{cfg.api.port}...")
+        uvicorn.run("api.server:app", host=cfg.api.host, port=cfg.api.port, reload=False)
     elif mode == "mcp":
-        logger.error("Mode MCP belum diimplementasikan di Phase 1.")
+        from mcp_server.server import run_mcp_server
+        logger.info("Starting MCP stdio server...")
+        run_mcp_server()
     else:
         logger.error(f"Mode tidak dikenal: {mode}")
         sys.exit(1)
