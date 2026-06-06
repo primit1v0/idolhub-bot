@@ -76,6 +76,6 @@ Types: `feat`, `fix`, `refactor`, `docs`, `chore`, `test`
 | Skill | Drop `.md` ke `skills/` | ✅ Ya |
 | Tool | Drop `.py` ke `tools/` | ✅ Ya |
 | Plugin/Hook | Drop `.py` ke `plugins/` | ✅ Ya |
-| LLM Provider | Tambah `providers/xxx_provider.py` | ❌ Daftarkan di `core/llm.py` |
+| LLM Provider | Tambah provider baru di core/llm.py | ❌ Daftarkan credentials di config.py & config.json |
 
 Tidak perlu ubah core untuk menambah skill, tool, atau plugin.

@@ -235,8 +235,8 @@ Jika tidak lulus minimal 2 → jangan tambah.
 
 | Phase | Status | Scope |
 |---|---|---|
-| **Phase 1** | 🚧 In Progress | Core bot · agent · memory · providers · skill/tool/plugin system |
-| **Phase 2** | 📋 Planned | FastAPI REST · MCP server · sqlite-vec memory |
+| **Phase 1** | ✅ Completed | Core bot · agent · memory · providers · skill/tool/plugin system |
+| **Phase 2** | 🚧 In Progress | FastAPI REST · MCP server · sqlite-vec memory |
 | **Phase 3** | 📋 Planned | WebUI Dashboard (config + monitoring) |
 | **Phase 4** | 💡 Future | Voice · advanced RAG · multi-agent |
 
