@@ -1,48 +1,121 @@
 {
-  "_comment": "Copy ke config.json dan isi nilai $VAR di /etc/idolhub/secrets.env",
+  "_doc": "Template config.json — copy isi ke config.json, isi $VAR ke /etc/idolhub/secrets.env",
+
   "app": {
+    "_doc": "Konfigurasi aplikasi utama",
     "name": "idolhub",
     "mode": "bot",
-    "debug": false
+    "_mode_options": "bot | api | mcp",
+    "debug": false,
+    "timezone": "Asia/Jakarta"
   },
+
+  "agent": {
+    "_doc": "Konfigurasi agent PocketFlow — system prompt diinjeksi di sini, bukan dari file eksternal",
+    "system_prompt": "You are idolhub, a helpful personal assistant. Be concise, accurate, and direct.",
+    "max_iterations": 10,
+    "_max_iterations_doc": "Batas loop agent sebelum force-stop (cegah infinite loop)",
+    "tools_enabled": true,
+    "memory_enabled": true
+  },
+
   "telegram": {
-    "token": "$TELEGRAM_BOT_TOKEN"
+    "_doc": "Konfigurasi Telegram Bot",
+    "token": "$TELEGRAM_BOT_TOKEN",
+    "allowed_users": [],
+    "_allowed_users_doc": "Kosong = semua user boleh. Isi dengan [123456789] untuk whitelist user ID",
+    "parse_mode": "Markdown",
+    "_parse_mode_options": "Markdown | MarkdownV2 | HTML"
   },
+
   "llm": {
+    "_doc": "Parameter LLM — credentials ada di providers[provider], bukan di sini",
     "provider": "openai",
-    "base_url": "$OPENAI_BASE_URL",
-    "api_key": "$OPENAI_API_KEY",
+    "_provider_options": "openai | codex | copilot",
     "model": "gpt-4o",
     "temperature": 0.7,
-    "max_tokens": 4096
+    "max_tokens": 4096,
+    "timeout": 30
   },
+
   "providers": {
+    "_doc": "Credentials per provider — hanya provider aktif yang digunakan, sisanya diabaikan",
+    "openai": {
+      "_doc": "OpenAI atau endpoint OpenAI-compatible (Ollama, LM Studio, dll)",
+      "base_url": "$OPENAI_BASE_URL",
+      "_base_url_example": "https://api.openai.com/v1",
+      "api_key": "$OPENAI_API_KEY"
+    },
     "codex": {
-      "oauth_token": "$GITHUB_CODEX_TOKEN",
-      "base_url": "https://api.githubcopilot.com"
+      "_doc": "GitHub Codex via OAuth token",
+      "base_url": "https://api.githubcopilot.com",
+      "oauth_token": "$GITHUB_CODEX_TOKEN"
     },
     "copilot": {
-      "cli_token": "$GITHUB_COPILOT_TOKEN",
-      "base_url": "https://api.githubcopilot.com"
+      "_doc": "GitHub Copilot via CLI auth token (gh auth token)",
+      "base_url": "https://api.githubcopilot.com",
+      "cli_token": "$GITHUB_COPILOT_TOKEN"
     }
   },
+
   "memory": {
-    "short_term": "sqlite",
-    "long_term": "chroma",
-    "sqlite_path": "./data/memory.db",
-    "chroma_path": "./data/chroma",
-    "max_history": 50
+    "_doc": "Konfigurasi memory — short_term aktif Phase 1, long_term aktif Phase 2",
+    "short_term": {
+      "backend": "sqlite",
+      "_backend_options": "sqlite",
+      "path": "./data/memory.db",
+      "max_messages": 50,
+      "_max_messages_doc": "Jumlah pesan terakhir yang disimpan per user per sesi"
+    },
+    "long_term": {
+      "backend": "none",
+      "_backend_options": "none | sqlite_vec",
+      "_sqlite_vec_note": "Aktifkan di Phase 2: uv sync --extra vector",
+      "path": "./data/vectors.db"
+    }
   },
+
+  "skills": {
+    "_doc": "Skill definitions dalam format OpenClaw/Hermes (.md files)",
+    "dir": "./skills",
+    "enabled": [],
+    "_enabled_doc": "Kosong = semua skill aktif. Isi nama untuk whitelist: ['web_search', 'summarize']"
+  },
+
+  "tools": {
+    "_doc": "Tool implementations (.py files, auto-discovered via registry)",
+    "dir": "./tools",
+    "enabled": [],
+    "_enabled_doc": "Kosong = semua tool aktif. Isi nama untuk whitelist: ['search', 'calculator']"
+  },
+
+  "plugins": {
+    "_doc": "Hook/plugin system (.py files, auto-loaded on startup)",
+    "dir": "./plugins",
+    "enabled": [],
+    "_enabled_doc": "Kosong = semua plugin aktif. Isi nama untuk whitelist: ['logger']"
+  },
+
   "api": {
+    "_doc": "FastAPI REST server — diaktifkan saat mode=api atau mode=all",
     "enabled": true,
     "host": "0.0.0.0",
-    "port": 8000
+    "port": 8000,
+    "cors_origins": [],
+    "_cors_origins_doc": "Kosong = tidak ada CORS. Contoh: ['http://localhost:3000', 'https://dashboard.idolhub.local']"
   },
+
   "mcp": {
+    "_doc": "MCP protocol server — compatible dengan Claude Desktop, Cursor, Windsurf",
     "enabled": true,
     "port": 8001
   },
-  "skills_dir": "./skills",
-  "tools_dir": "./tools",
-  "plugins_dir": "./plugins"
+
+  "logging": {
+    "_doc": "Konfigurasi logging — output ke stdout, ditangkap journald saat production",
+    "level": "INFO",
+    "_level_options": "DEBUG | INFO | WARNING | ERROR",
+    "format": "text",
+    "_format_options": "text | json"
+  }
 }
