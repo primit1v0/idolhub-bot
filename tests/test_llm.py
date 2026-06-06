@@ -72,6 +72,28 @@ def test_get_openai_codex_client():
     assert client.api_key == "oauth_123"
     assert str(client.base_url).rstrip("/") == "https://api.openai.com/v1"
 
+def test_get_gemini_client():
+    cfg = AppConfig.model_validate({
+        "app": {"name": "test", "mode": "bot"},
+        "telegram": {"token": "test"},
+        "agent": {"system_prompt": "sys"},
+        "llm": {"provider": "gemini", "model": "gemma-4-31b-it"},
+        "providers": {
+            "gemini": {"base_url": "https://generativelanguage.googleapis.com/v1beta/openai/", "api_key": "AIzaSy_123"}
+        },
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
+        "skills": {"dir": "./skills"},
+        "tools": {"dir": "./tools"},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "mcp": {"enabled": False},
+        "logging": {"level": "INFO"}
+    })
+
+    client = get_llm_client(cfg)
+    assert client.api_key == "AIzaSy_123"
+    assert str(client.base_url).rstrip("/") == "https://generativelanguage.googleapis.com/v1beta/openai"
+
 def test_invalid_provider_raises_error():
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
