@@ -184,6 +184,16 @@ Paralel:
   mcp/    ←── MCP clients (Claude Desktop, Cursor, dll)
 ```
 
+### 3.3 Security & Sandboxing (bwrap)
+
+`idolhub` memiliki kebijakan ketat terkait eksekusi *shell commands* yang dilakukan oleh agent, mengadopsi mekanisme *sandbox* dari [nanobot-ai](https://github.com/primit1v0/nanobot).
+
+- **Default Workspace Only**: Agent hanya dapat bekerja, membaca, dan menulis di dalam folder `workspace` yang telah ditentukan. Agent tidak bisa keluar dari batasan ini.
+- **Bubblewrap (bwrap) Enforcement**: Setiap perintah terminal yang dieksekusi oleh agent dibungkus ke dalam *ephemeral container* menggunakan `bwrap`.
+- **Isolasi Konfigurasi**: `bwrap` akan melakukan *bind-mount* `tmpfs` kosong di atas direktori *parent* dari workspace. Artinya, meskipun agent mengeksekusi `ls ../`, mereka tidak akan melihat `config.json`, `/etc/idolhub/secrets.env`, atau konfigurasi bot lainnya.
+- **Zero Configuration**: Fitur sandbox ini aktif secara default untuk semua eksekusi shell dan tidak bisa dimatikan via `config.json`.
+
+
 ---
 
 ## 4. Configuration
