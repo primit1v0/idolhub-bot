@@ -325,6 +325,32 @@ class SqliteStore:
             # Fallback jika FTS5 query format bermasalah
             return []
 
+    async def search_history_semantic(self, user_id: str, query: str, limit: int = 3) -> List[Dict]:
+        """Mencari riwayat pesan lama secara semantik menggunakan sqlite-vec MATCH."""
+        if self.long_term_backend != "sqlite_vec" or not self.vec_db:
+            return []
+            
+        try:
+            embedding = await self._get_embedding(query)
+            if not embedding:
+                return []
+                
+            import sqlite_vec
+            serialized = sqlite_vec.serialize_float32(embedding)
+            
+            sql = '''
+                SELECT sm.role, sm.content
+                FROM vec_messages v
+                JOIN semantic_messages sm ON v.rowid = sm.id
+                WHERE sm.user_id = ? AND v.embedding MATCH ? AND k = ?
+            '''
+            async with self.vec_db.execute(sql, (str(user_id), serialized, limit)) as cursor:
+                rows = await cursor.fetchall()
+                
+            return [{"role": r[0], "content": r[1]} for r in rows]
+        except Exception:
+            return []
+
     async def _get_embedding(self, text: str) -> List[float]:
         from core.llm import get_llm_client
         client = get_llm_client(self.cfg)

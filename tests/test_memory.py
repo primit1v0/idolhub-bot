@@ -481,6 +481,54 @@ async def test_sqlite_store_add_message_vector(tmp_path, monkeypatch):
     await store.close()
 
 
+@pytest.mark.asyncio
+async def test_sqlite_store_search_semantic(tmp_path, monkeypatch):
+    from memory.sqlite_store import SqliteStore
+    cfg = AppConfig.model_validate({
+        "app": {"name": "test", "mode": "bot"},
+        "telegram": {"token": "test"},
+        "agent": {"system_prompt": "sys"},
+        "llm": {"provider": "openai", "model": "gpt-4"},
+        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "memory": {
+            "short_term": {"backend": "sqlite", "path": str(tmp_path / "short.db")},
+            "long_term": {
+                "backend": "sqlite_vec",
+                "path": str(tmp_path / "long.db"),
+                "embedding_model": "text-embedding-3-small"
+            }
+        },
+        "skills": {"dir": "./skills"},
+        "tools": {"dir": "./tools"},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "mcp": {"enabled": False},
+        "logging": {"level": "INFO"}
+    })
+    store = SqliteStore(cfg)
+    await store.initialize()
+    
+    # Mock embedding generator
+    async def mock_get_embedding(self, text):
+        # return unique vectors depending on text
+        if "apple" in text:
+            return [0.9] * 1536
+        return [0.1] * 1536
+    monkeypatch.setattr(SqliteStore, "_get_embedding", mock_get_embedding)
+    
+    await store.add_message("user_1", "user", "I want an apple")
+    await store.add_message("user_1", "user", "Sky is blue")
+    
+    # Search for apple
+    results = await store.search_history_semantic("user_1", "Show me apple", limit=1)
+    assert len(results) == 1
+    assert results[0]["content"] == "I want an apple"
+    assert results[0]["role"] == "user"
+    
+    await store.close()
+
+
+
 
 
 
