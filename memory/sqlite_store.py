@@ -306,6 +306,15 @@ class SqliteStore:
             # Fallback jika FTS5 query format bermasalah
             return []
 
+    async def _get_embedding(self, text: str) -> List[float]:
+        from core.llm import get_llm_client
+        client = get_llm_client(self.cfg)
+        response = await client.embeddings.create(
+            model=self.embedding_model,
+            input=text
+        )
+        return response.data[0].embedding
+
     async def close(self):
         """Tutup koneksi database."""
         if self.db:

@@ -385,6 +385,54 @@ async def test_sqlite_store_vector_init(tmp_path):
     await store.close()
 
 
+@pytest.mark.asyncio
+async def test_sqlite_store_get_embedding(tmp_path, monkeypatch):
+    from memory.sqlite_store import SqliteStore
+    cfg = AppConfig.model_validate({
+        "app": {"name": "test", "mode": "bot"},
+        "telegram": {"token": "test"},
+        "agent": {"system_prompt": "sys"},
+        "llm": {"provider": "openai", "model": "gpt-4"},
+        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "memory": {
+            "short_term": {"backend": "sqlite", "path": str(tmp_path / "short.db")},
+            "long_term": {
+                "backend": "sqlite_vec",
+                "path": str(tmp_path / "long.db"),
+                "embedding_model": "text-embedding-3-small"
+            }
+        },
+        "skills": {"dir": "./skills"},
+        "tools": {"dir": "./tools"},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "mcp": {"enabled": False},
+        "logging": {"level": "INFO"}
+    })
+    store = SqliteStore(cfg)
+    
+    # Mock the OpenAI embeddings.create API
+    class MockData:
+        embedding = [0.2] * 1536
+    class MockResponse:
+        data = [MockData()]
+    
+    async def mock_create(*args, **kwargs):
+        return MockResponse()
+        
+    class MockClient:
+        class MockEmbeddings:
+            create = mock_create
+        embeddings = MockEmbeddings()
+        
+    monkeypatch.setattr("core.llm.get_llm_client", lambda c: MockClient())
+    
+    emb = await store._get_embedding("test text")
+    assert len(emb) == 1536
+    assert emb[0] == 0.2
+
+
+
 
 
 
