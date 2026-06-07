@@ -196,17 +196,33 @@ class IdolhubAgent:
         recent_contents = [m["content"] for m in messages[-4:]] if len(messages) >= 4 else [m["content"] for m in messages]
         unique_fts = [m for m in fts_messages if m.get("matched_content", m["content"]) not in recent_contents]
 
+        # 2b. Retrieve semantic matching messages
+        semantic_messages = []
+        if self.cfg.memory.long_term.backend == "sqlite_vec":
+            semantic_messages = await self.memory.search_history_semantic(
+                user_id, user_input, limit=3
+            )
+        unique_semantic = [
+            message
+            for message in semantic_messages
+            if message["content"] not in recent_contents
+        ]
+
         # 3. Reciprocal Rank Fusion (RRF) Merger
         # We assign rank score = 1 / (60 + rank)
-        rrf_items = []
+        rrf_map = {}
         for rank, (_, fact) in enumerate(scored_facts):
-            score = 1.0 / (60.0 + rank)
-            rrf_items.append((score, f"Fakta: {fact['entity']} -> {fact['nilai']}"))
+            item = f"Fakta: {fact['entity']} -> {fact['nilai']}"
+            rrf_map[item] = rrf_map.get(item, 0.0) + (1.0 / (60.0 + rank))
         for rank, msg in enumerate(unique_fts):
-            score = 1.0 / (60.0 + rank)
-            rrf_items.append((score, f"Pesan lampau ({msg['role']}): {msg['content']}"))
+            item = f"Pesan lampau ({msg['role']}): {msg['content']}"
+            rrf_map[item] = rrf_map.get(item, 0.0) + (1.0 / (60.0 + rank))
+        for rank, msg in enumerate(unique_semantic):
+            item = f"Pesan lampau ({msg['role']}): {msg['content']}"
+            rrf_map[item] = rrf_map.get(item, 0.0) + (1.0 / (60.0 + rank))
             
         # Sort combined by RRF score DESC and limit to top 3
+        rrf_items = [(score, item) for item, score in rrf_map.items()]
         rrf_items.sort(key=lambda x: x[0], reverse=True)
         top_rrf = [item[1] for item in rrf_items[:3]]
         

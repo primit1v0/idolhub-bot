@@ -1,8 +1,84 @@
 
+import builtins
+import subprocess
+import sys
+
 import pytest
 
 from core.config import AppConfig
 from memory.sqlite_store import SqliteStore
+
+
+def test_sqlite_store_import_without_sqlite_vec():
+    script = """
+import builtins
+
+real_import = builtins.__import__
+
+def import_without_sqlite_vec(name, *args, **kwargs):
+    if name == "sqlite_vec":
+        raise ModuleNotFoundError("sqlite_vec is intentionally unavailable")
+    return real_import(name, *args, **kwargs)
+
+builtins.__import__ = import_without_sqlite_vec
+import memory.sqlite_store
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=".",
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.asyncio
+async def test_vector_init_missing_dependency_fails_before_opening_db(
+    tmp_path, monkeypatch
+):
+    cfg = AppConfig.model_validate(
+        {
+            "app": {"name": "test", "mode": "bot"},
+            "telegram": {"token": "test"},
+            "agent": {"system_prompt": "sys"},
+            "llm": {"provider": "openai", "model": "gpt-4"},
+            "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+            "memory": {
+                "short_term": {
+                    "backend": "sqlite",
+                    "path": str(tmp_path / "short.db"),
+                },
+                "long_term": {
+                    "backend": "sqlite_vec",
+                    "path": str(tmp_path / "long.db"),
+                },
+            },
+            "skills": {"dir": "./skills"},
+            "tools": {"dir": "./tools"},
+            "plugins": {"dir": "./plugins"},
+            "api": {"enabled": False},
+            "mcp": {"enabled": False},
+            "logging": {"level": "INFO"},
+        }
+    )
+    real_import = builtins.__import__
+
+    def import_without_sqlite_vec(name, *args, **kwargs):
+        if name == "sqlite_vec":
+            raise ModuleNotFoundError("sqlite_vec is intentionally unavailable")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", import_without_sqlite_vec)
+    store = SqliteStore(cfg)
+
+    try:
+        with pytest.raises(RuntimeError, match="uv sync --extra vector"):
+            await store.initialize()
+        assert store.db is None
+    finally:
+        await store.close()
 
 
 @pytest.fixture
@@ -482,6 +558,54 @@ async def test_sqlite_store_add_message_vector(tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_sqlite_store_add_message_vector_failure_falls_back(
+    tmp_path, monkeypatch, caplog
+):
+    cfg = AppConfig.model_validate(
+        {
+            "app": {"name": "test", "mode": "bot"},
+            "telegram": {"token": "test"},
+            "agent": {"system_prompt": "sys"},
+            "llm": {"provider": "openai", "model": "gpt-4"},
+            "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+            "memory": {
+                "short_term": {
+                    "backend": "sqlite",
+                    "path": str(tmp_path / "short.db"),
+                },
+                "long_term": {
+                    "backend": "sqlite_vec",
+                    "path": str(tmp_path / "long.db"),
+                    "embedding_model": "text-embedding-3-small",
+                },
+            },
+            "skills": {"dir": "./skills"},
+            "tools": {"dir": "./tools"},
+            "plugins": {"dir": "./plugins"},
+            "api": {"enabled": False},
+            "mcp": {"enabled": False},
+            "logging": {"level": "INFO"},
+        }
+    )
+    store = SqliteStore(cfg)
+
+    async def fail_embedding(self, text):
+        raise RuntimeError("embedding service unavailable")
+
+    monkeypatch.setattr(SqliteStore, "_get_embedding", fail_embedding)
+
+    try:
+        await store.initialize()
+        await store.add_message("user_1", "user", "Keep this short-term message")
+
+        history = await store.get_history("user_1")
+        assert history == [{"role": "user", "content": "Keep this short-term message"}]
+        assert "Failed to store semantic message" in caplog.text
+    finally:
+        await store.close()
+
+
+@pytest.mark.asyncio
 async def test_sqlite_store_search_semantic(tmp_path, monkeypatch):
     from memory.sqlite_store import SqliteStore
     cfg = AppConfig.model_validate({
@@ -526,9 +650,6 @@ async def test_sqlite_store_search_semantic(tmp_path, monkeypatch):
     assert results[0]["role"] == "user"
     
     await store.close()
-
-
-
 
 
 

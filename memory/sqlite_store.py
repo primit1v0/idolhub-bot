@@ -1,11 +1,13 @@
+import logging
 import os
 import re
 from typing import Dict, List
 
 import aiosqlite
-import sqlite_vec
 
 from core.config import AppConfig
+
+logger = logging.getLogger(__name__)
 
 
 def calculate_jaccard(text1: str, text2: str) -> float:
@@ -35,9 +37,20 @@ class SqliteStore:
         self.embedding_model = cfg.memory.long_term.embedding_model
         self.db = None
         self.vec_db = None
+        self._sqlite_vec = None
 
     async def initialize(self):
         """Membuat tabel jika belum ada."""
+        if self.long_term_backend == "sqlite_vec":
+            try:
+                import sqlite_vec
+            except ModuleNotFoundError as exc:
+                raise RuntimeError(
+                    "sqlite-vec backend requires the vector extra: uv sync --extra vector"
+                ) from exc
+
+            self._sqlite_vec = sqlite_vec
+
         # Pastikan direktori ada sebelum bikin DB
         if self.db_path != ":memory:":
             os.makedirs(os.path.dirname(os.path.abspath(self.db_path)), exist_ok=True)
@@ -115,7 +128,7 @@ class SqliteStore:
                 os.makedirs(os.path.dirname(os.path.abspath(self.long_term_path)), exist_ok=True)
             self.vec_db = await aiosqlite.connect(self.long_term_path)
             await self.vec_db.enable_load_extension(True)
-            await self.vec_db.load_extension(sqlite_vec.loadable_path())
+            await self.vec_db.load_extension(self._sqlite_vec.loadable_path())
             await self.vec_db.execute('''
                 CREATE TABLE IF NOT EXISTS semantic_messages (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -180,15 +193,17 @@ class SqliteStore:
                         (str(user_id), role, content)
                     )
                     row_id = cursor.lastrowid
-                    serialized = sqlite_vec.serialize_float32(embedding)
+                    serialized = self._sqlite_vec.serialize_float32(embedding)
                     await self.vec_db.execute(
                         'INSERT INTO vec_messages (rowid, embedding) VALUES (?, ?)',
                         (row_id, serialized)
                     )
                     await self.vec_db.commit()
             except Exception:
-                # Fallback to prevent crashes if offline or API key is invalid
-                pass
+                logger.warning(
+                    "Failed to store semantic message; short-term memory remains available",
+                    exc_info=True,
+                )
 
     async def get_history(self, user_id: str) -> List[Dict[str, str]]:
         """Mengambil X pesan terakhir untuk konteks (sesuai max_messages di config)."""
@@ -334,9 +349,8 @@ class SqliteStore:
             embedding = await self._get_embedding(query)
             if not embedding:
                 return []
-                
-            import sqlite_vec
-            serialized = sqlite_vec.serialize_float32(embedding)
+
+            serialized = self._sqlite_vec.serialize_float32(embedding)
             
             sql = '''
                 SELECT sm.role, sm.content

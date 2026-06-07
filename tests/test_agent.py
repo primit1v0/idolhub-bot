@@ -591,7 +591,7 @@ async def test_agent_gating_disabled(monkeypatch):
     agent = IdolhubAgent(cfg)
     await agent.initialize()
     
-    response = await agent.run("user_gating_disabled", "hobi saya hacking")
+    await agent.run("user_gating_disabled", "hobi saya hacking")
     
     facts = await agent.memory.get_fakta("user_gating_disabled", limit=10)
     assert len(facts) == 1
@@ -661,8 +661,86 @@ async def test_agent_fts_threading_integration(monkeypatch):
     await agent.close()
 
 
+@pytest.mark.asyncio
+async def test_agent_semantic_rrf_integration(tmp_path, monkeypatch):
+    from memory.sqlite_store import SqliteStore
 
+    cfg = AppConfig.model_validate(
+        {
+            "app": {"name": "test", "mode": "bot"},
+            "telegram": {"token": "test"},
+            "agent": {
+                "system_prompt": "You are a helpful assistant",
+                "max_iterations": 3,
+                "tools_enabled": False,
+                "memory_enabled": True,
+                "filter_enabled": False,
+                "gating_enabled": False,
+            },
+            "llm": {"provider": "openai", "model": "gpt-4"},
+            "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+            "memory": {
+                "short_term": {
+                    "backend": "sqlite",
+                    "path": str(tmp_path / "short.db"),
+                    "max_messages": 2,
+                    "fts_context_window": 1,
+                },
+                "long_term": {
+                    "backend": "sqlite_vec",
+                    "path": str(tmp_path / "long.db"),
+                    "embedding_model": "text-embedding-3-small",
+                },
+            },
+            "skills": {"dir": "./skills"},
+            "tools": {"dir": "./tools"},
+            "plugins": {"dir": "./plugins"},
+            "api": {"enabled": False},
+            "mcp": {"enabled": False},
+            "logging": {"level": "INFO"},
+        }
+    )
 
+    # Mock embedding call
+    async def mock_get_embedding(self, text):
+        if "coding" in text or "programming" in text:
+            return [0.9] * 1536
+        return [0.1] * 1536
 
+    monkeypatch.setattr(SqliteStore, "_get_embedding", mock_get_embedding)
 
+    # Mock the LLM call to just return text response and capture messages
+    captured_messages = []
 
+    async def mock_call_llm(cfg, messages, tools=None):
+        nonlocal captured_messages
+        captured_messages = list(messages)
+        return {"type": "text", "content": "I understand."}
+
+    monkeypatch.setattr("core.agent.call_llm", mock_call_llm)
+
+    agent = IdolhubAgent(cfg)
+    try:
+        await agent.initialize()
+
+        # Push the semantic target outside the short-term context window.
+        await agent.memory.add_message("user_1", "user", "Previous message about coding")
+        await agent.memory.add_message("user_1", "assistant", "Noted.")
+        await agent.memory.add_message("user_1", "user", "The weather is sunny")
+
+        res = await agent.run("user_1", "Programming guidance")
+        assert res == "I understand."
+
+        system_msg = next(
+            (
+                msg["content"]
+                for msg in captured_messages
+                if msg["role"] == "system"
+                and "Relevant context (RRF ranked):" in msg["content"]
+            ),
+            None,
+        )
+        assert system_msg is not None
+        assert "Pesan lampau (user): Previous message about coding" in system_msg
+    finally:
+        await agent.close()
