@@ -171,6 +171,25 @@ class SqliteStore:
 
         await self.db.commit()
 
+        if self.long_term_backend == "sqlite_vec" and self.vec_db:
+            try:
+                embedding = await self._get_embedding(content)
+                if embedding:
+                    cursor = await self.vec_db.execute(
+                        'INSERT INTO semantic_messages (user_id, role, content) VALUES (?, ?, ?)',
+                        (str(user_id), role, content)
+                    )
+                    row_id = cursor.lastrowid
+                    serialized = sqlite_vec.serialize_float32(embedding)
+                    await self.vec_db.execute(
+                        'INSERT INTO vec_messages (rowid, embedding) VALUES (?, ?)',
+                        (row_id, serialized)
+                    )
+                    await self.vec_db.commit()
+            except Exception:
+                # Fallback to prevent crashes if offline or API key is invalid
+                pass
+
     async def get_history(self, user_id: str) -> List[Dict[str, str]]:
         """Mengambil X pesan terakhir untuk konteks (sesuai max_messages di config)."""
         # Ambil dengan limit, diurutkan DESC untuk dapat yang terbaru, lalu reverse ke urutan asli

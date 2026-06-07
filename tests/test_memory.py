@@ -432,6 +432,56 @@ async def test_sqlite_store_get_embedding(tmp_path, monkeypatch):
     assert emb[0] == 0.2
 
 
+@pytest.mark.asyncio
+async def test_sqlite_store_add_message_vector(tmp_path, monkeypatch):
+    from memory.sqlite_store import SqliteStore
+    cfg = AppConfig.model_validate({
+        "app": {"name": "test", "mode": "bot"},
+        "telegram": {"token": "test"},
+        "agent": {"system_prompt": "sys"},
+        "llm": {"provider": "openai", "model": "gpt-4"},
+        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "memory": {
+            "short_term": {"backend": "sqlite", "path": str(tmp_path / "short.db")},
+            "long_term": {
+                "backend": "sqlite_vec",
+                "path": str(tmp_path / "long.db"),
+                "embedding_model": "text-embedding-3-small"
+            }
+        },
+        "skills": {"dir": "./skills"},
+        "tools": {"dir": "./tools"},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "mcp": {"enabled": False},
+        "logging": {"level": "INFO"}
+    })
+    store = SqliteStore(cfg)
+    await store.initialize()
+    
+    # Mock embedding generator
+    async def mock_get_embedding(self, text):
+        return [0.5] * 1536
+    monkeypatch.setattr(SqliteStore, "_get_embedding", mock_get_embedding)
+    
+    await store.add_message("user_1", "user", "Hello semantic world")
+    
+    # Verify message stored in semantic_messages
+    async with store.vec_db.execute("SELECT content FROM semantic_messages WHERE user_id='user_1'") as cursor:
+        row = await cursor.fetchone()
+        assert row is not None
+        assert row[0] == "Hello semantic world"
+        
+    # Verify vector stored in vec_messages
+    async with store.vec_db.execute("SELECT rowid FROM vec_messages") as cursor:
+        row = await cursor.fetchone()
+        assert row is not None
+        assert row[0] == 1
+        
+    await store.close()
+
+
+
 
 
 
