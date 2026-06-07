@@ -47,3 +47,34 @@ def test_load_config_resolves_nested_dict(monkeypatch, tmp_path):
     assert isinstance(cfg, AppConfig)
     assert cfg.telegram.token == "secret-key"
     assert cfg.app.name == "test"
+
+
+def test_long_term_config_embedding_model():
+    from core.config import load_config
+    import tempfile
+    import json
+    
+    data = {
+        "app": {"name": "test", "mode": "bot"},
+        "telegram": {"token": "test"},
+        "agent": {"system_prompt": "sys"},
+        "llm": {"provider": "openai", "model": "gpt-4"},
+        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "memory": {
+            "short_term": {"backend": "sqlite", "path": "x"},
+            "long_term": {"backend": "sqlite_vec", "path": "y", "embedding_model": "text-embedding-3-small"}
+        },
+        "skills": {"dir": "./skills"},
+        "tools": {"dir": "./tools"},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "mcp": {"enabled": False},
+        "logging": {"level": "INFO"}
+    }
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump(data, f)
+        f.flush()
+        
+    cfg = load_config(f.name)
+    assert cfg.memory.long_term.embedding_model == "text-embedding-3-small"
+

@@ -84,7 +84,9 @@
       "backend": "none",
       "_backend_options": "none | sqlite_vec",
       "_sqlite_vec_note": "Aktifkan di Phase 2: uv sync --extra vector",
-      "path": "./data/vectors.db"
+      "path": "./data/vectors.db",
+      "embedding_model": "text-embedding-3-small",
+      "_embedding_model_doc": "Model embedding OpenAI-compatible untuk semantic search"
     }
   },
 

@@ -127,6 +127,7 @@ Hanya provider yang dipilih di `llm.provider` yang aktif. Sisanya diabaikan.
 |---|---|---|---|
 | `backend` | string | `"none"` | Backend: `none` \| `sqlite_vec` *(Phase 2)* |
 | `path` | string | `"./data/vectors.db"` | Path file vector DB |
+| `embedding_model` | string | `"text-embedding-3-small"` | Model embedding OpenAI-compatible untuk semantic search |
 
 > **Phase 1**: `long_term.backend = "none"` — tidak ada vector memory.
 > **Phase 2**: Ganti ke `"sqlite_vec"` + `uv sync --extra vector`. Vector memory menggunakan ekstensi SQLite `sqlite-vec` yang ringan untuk pemrosesan semantik lokal di dalam file database yang sama atau terpisah.

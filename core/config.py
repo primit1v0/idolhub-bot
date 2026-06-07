@@ -78,6 +78,7 @@ class ShortTermMemory(BaseModel):
 class LongTermMemory(BaseModel):
     backend: Literal["none", "sqlite_vec"] = "none"
     path: str = "./data/vectors.db"
+    embedding_model: str = "text-embedding-3-small"
 
 class MemorySection(BaseModel):
     short_term: ShortTermMemory
