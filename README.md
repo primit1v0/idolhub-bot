@@ -21,7 +21,8 @@ The current baseline is implemented and covered by 67 tests:
 - Prompt-injection filtering, memory-write gating, and bubblewrap sandboxing.
 
 See [Current Baseline](docs/BASELINE.md) for the authoritative feature and
-configuration status.
+configuration status. Start a new work session from
+[Next Phase](docs/NEXT_PHASE.md).
 
 ## Configuration Policy
 
@@ -151,6 +152,8 @@ repository.
 ## Documentation
 
 - [Current baseline](docs/BASELINE.md)
+- [Next phase handoff](docs/NEXT_PHASE.md)
+- [Active specifications](docs/specs/)
 - [Configuration reference](docs/CONFIG.md)
 - [Dependency decisions](docs/DEPENDENCIES.md)
 - [Contributing](docs/CONTRIBUTING.md)
@@ -162,6 +165,7 @@ repository.
 | Status | Scope |
 |---|---|
 | Implemented | Core runtime, APIs, extension systems, security controls, and memory stack |
+| Proposed | Foundation hardening listed in the active 39-point specification |
 | Deferred | Dashboard WebUI |
 | Not scheduled | Voice, multi-agent orchestration, additional RAG backends |
 

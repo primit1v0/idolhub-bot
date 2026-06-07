@@ -7,6 +7,10 @@
 This document is the canonical status reference. Historical phase numbers in
 `docs/superpowers/` describe the order of past work only.
 
+The proposed next phase is tracked in
+[`docs/NEXT_PHASE.md`](NEXT_PHASE.md). Active project specifications are stored
+under `docs/specs/` and apply to every model and contributor.
+
 ## Implemented
 
 - Telegram bot with PocketFlow async agent flow.
@@ -79,6 +83,13 @@ exist.
 ## Deferred
 
 - Dashboard WebUI. The directory is a placeholder only.
+
+## Proposed Next Phase
+
+- Foundation hardening is listed as 39 work titles in
+  [`docs/specs/2026-06-07-baseline-foundation-hardening.md`](specs/2026-06-07-baseline-foundation-hardening.md).
+- No implementation schema or task plan has been approved yet.
+- Start future sessions from [`docs/NEXT_PHASE.md`](NEXT_PHASE.md).
 
 ## Not Scheduled
 

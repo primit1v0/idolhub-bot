@@ -1,12 +1,14 @@
 # Contributing
 
-Read [Current Baseline](BASELINE.md) before changing behavior.
+Read [Current Baseline](BASELINE.md) and [Next Phase](NEXT_PHASE.md) before
+changing behavior. These documents apply to every model and contributor.
 
 ## Repository Rules
 
 - `config.example.json` is the only tracked configuration template.
 - Never commit `config.json`, secrets, databases, logs, or workspace output.
 - Do not reintroduce global phase numbering into active docs.
+- Keep active specifications under `docs/specs/`.
 - Historical specs and plans must retain their status banners.
 - Use existing PocketFlow, loader, and registry patterns.
 - Avoid new dependencies when stdlib or an existing dependency is sufficient.
