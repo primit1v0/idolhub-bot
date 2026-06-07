@@ -89,3 +89,6 @@ htmlcov/
 # --- Custom local tools & runtime directories ---
 .audit-tools/
 workspace/
+
+# --- Audit reports (generated) ---
+hasilaudit.md

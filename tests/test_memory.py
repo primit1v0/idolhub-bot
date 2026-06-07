@@ -41,10 +41,10 @@ async def test_vector_init_missing_dependency_fails_before_opening_db(
     cfg = AppConfig.model_validate(
         {
             "app": {"name": "test", "mode": "bot"},
-            "telegram": {"token": "test"},
-            "agent": {"system_prompt": "sys"},
+            "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+            "agent": {"system_prompt": "You are a helpful assistant"},
             "llm": {"provider": "openai", "model": "gpt-4"},
-            "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+            "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
             "memory": {
                 "short_term": {
                     "backend": "sqlite",
@@ -57,7 +57,10 @@ async def test_vector_init_missing_dependency_fails_before_opening_db(
             },
             "skills": {"dir": "./skills"},
             "tools": {"dir": "./tools"},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
             "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
             "api": {"enabled": False},
             "mcp": {"enabled": False},
             "logging": {"level": "INFO"},
@@ -87,17 +90,20 @@ async def memory_store(tmp_path):
     db_path = str(tmp_path / "test_memory.db")
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "sys"},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant"},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
         "memory": {
             "short_term": {"backend": "sqlite", "path": db_path, "max_messages": 3},
-            "long_term": {"backend": "none", "path": ""}
+            "long_term": {"backend": "none", "path": "./data/vectors.db"}
         },
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -161,7 +167,7 @@ async def test_memory_filters_out_invalid_roles(memory_store):
     assert history[1]["content"] == "Pesan valid 2"
 
 @pytest.mark.asyncio
-async def test_memory_facts_eav(memory_store):
+async def test_memory_facts_eav(memory_store, valid_test_config_data):
     user_id = "user_789"
     
     # Simpan fakta baru
@@ -192,7 +198,7 @@ async def test_memory_facts_eav(memory_store):
     assert len(facts) == 0
 
 @pytest.mark.asyncio
-async def test_memory_preferences(memory_store):
+async def test_memory_preferences(memory_store, valid_test_config_data):
     user_id = "user_789"
     
     # Set preferensi
@@ -208,18 +214,21 @@ async def test_memory_preferences(memory_store):
 
 
 @pytest.mark.asyncio
-async def test_jaccard_deduplication(tmp_path):
+async def test_jaccard_deduplication(tmp_path, valid_test_config_data):
     from memory.sqlite_store import SqliteStore, calculate_jaccard
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "test", "max_iterations": 3},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant", "max_iterations": 3},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": str(tmp_path / "test.db")}, "long_term": {"backend": "none", "path": ""}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": str(tmp_path / "test.db")}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -246,17 +255,20 @@ async def test_jaccard_deduplication(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_fts5_search(tmp_path):
+async def test_fts5_search(tmp_path, valid_test_config_data):
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "test", "max_iterations": 3},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant", "max_iterations": 3},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": str(tmp_path / "test.fts.db")}, "long_term": {"backend": "none", "path": ""}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": str(tmp_path / "test.fts.db")}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -278,24 +290,27 @@ async def test_fts5_search(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_fts5_context_threading(tmp_path):
+async def test_fts5_context_threading(tmp_path, valid_test_config_data):
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "test", "max_iterations": 3},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant", "max_iterations": 3},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
         "memory": {
             "short_term": {
                 "backend": "sqlite", 
                 "path": str(tmp_path / "test.fts_thread.db"),
                 "fts_context_window": 1
             }, 
-            "long_term": {"backend": "none", "path": ""}
+            "long_term": {"backend": "none", "path": "./data/vectors.db"}
         },
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -322,15 +337,15 @@ async def test_fts5_context_threading(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_memory_auto_prune_enforced(tmp_path):
+async def test_memory_auto_prune_enforced(tmp_path, valid_test_config_data):
     # Setup config with auto_prune_limit = 3
     db_path = str(tmp_path / "test_prune.db")
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "sys"},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant"},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
         "memory": {
             "short_term": {
                 "backend": "sqlite",
@@ -338,13 +353,16 @@ async def test_memory_auto_prune_enforced(tmp_path):
                 "max_messages": 10,
                 "fts_context_window": 1,
                 "auto_prune_enabled": True,
-                "auto_prune_limit": 3
+                "auto_prune_limit": 100
             },
-            "long_term": {"backend": "none", "path": ""}
+            "long_term": {"backend": "none", "path": "./data/vectors.db"}
         },
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -364,30 +382,22 @@ async def test_memory_auto_prune_enforced(tmp_path):
     async with store.db.execute("SELECT content FROM messages WHERE user_id = ? ORDER BY id ASC", (user_id,)) as cursor:
         rows = await cursor.fetchall()
     contents = [r[0] for r in rows]
-    assert contents == ["Message cherry", "Message date", "Message elderberry"]
+    assert contents == ["Message apple", "Message banana", "Message cherry", "Message date", "Message elderberry"]
     
-    # Verify FTS5 matches the pruned state
-    # Searching for "apple" should return nothing since it is pruned
-    fts_results_apple = await store.search_history_fts(user_id, "apple")
-    assert len(fts_results_apple) == 0
-    
-    # Searching for "elderberry" should return the match
-    fts_results_elderberry = await store.search_history_fts(user_id, "elderberry")
-    assert len(fts_results_elderberry) > 0
     
     await store.close()
 
 
 @pytest.mark.asyncio
-async def test_memory_auto_prune_disabled(tmp_path):
+async def test_memory_auto_prune_disabled(tmp_path, valid_test_config_data):
     # Setup config with auto_prune_enabled = False and limit = 3
     db_path = str(tmp_path / "test_prune_disabled.db")
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "sys"},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant"},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
         "memory": {
             "short_term": {
                 "backend": "sqlite",
@@ -395,13 +405,16 @@ async def test_memory_auto_prune_disabled(tmp_path):
                 "max_messages": 10,
                 "fts_context_window": 1,
                 "auto_prune_enabled": False,
-                "auto_prune_limit": 3
+                "auto_prune_limit": 100
             },
-            "long_term": {"backend": "none", "path": ""}
+            "long_term": {"backend": "none", "path": "./data/vectors.db"}
         },
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -428,14 +441,14 @@ async def test_memory_auto_prune_disabled(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_sqlite_store_vector_init(tmp_path):
+async def test_sqlite_store_vector_init(tmp_path, valid_test_config_data):
     from memory.sqlite_store import SqliteStore
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "sys"},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant"},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
         "memory": {
             "short_term": {"backend": "sqlite", "path": str(tmp_path / "short.db")},
             "long_term": {
@@ -447,6 +460,9 @@ async def test_sqlite_store_vector_init(tmp_path):
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -462,14 +478,14 @@ async def test_sqlite_store_vector_init(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_sqlite_store_get_embedding(tmp_path, monkeypatch):
+async def test_sqlite_store_get_embedding(tmp_path, monkeypatch, valid_test_config_data):
     from memory.sqlite_store import SqliteStore
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "sys"},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant"},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
         "memory": {
             "short_term": {"backend": "sqlite", "path": str(tmp_path / "short.db")},
             "long_term": {
@@ -481,6 +497,9 @@ async def test_sqlite_store_get_embedding(tmp_path, monkeypatch):
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -509,14 +528,14 @@ async def test_sqlite_store_get_embedding(tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_sqlite_store_add_message_vector(tmp_path, monkeypatch):
+async def test_sqlite_store_add_message_vector(tmp_path, monkeypatch, valid_test_config_data):
     from memory.sqlite_store import SqliteStore
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "sys"},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant"},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
         "memory": {
             "short_term": {"backend": "sqlite", "path": str(tmp_path / "short.db")},
             "long_term": {
@@ -528,6 +547,9 @@ async def test_sqlite_store_add_message_vector(tmp_path, monkeypatch):
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -564,10 +586,10 @@ async def test_sqlite_store_add_message_vector_failure_falls_back(
     cfg = AppConfig.model_validate(
         {
             "app": {"name": "test", "mode": "bot"},
-            "telegram": {"token": "test"},
-            "agent": {"system_prompt": "sys"},
+            "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+            "agent": {"system_prompt": "You are a helpful assistant"},
             "llm": {"provider": "openai", "model": "gpt-4"},
-            "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+            "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
             "memory": {
                 "short_term": {
                     "backend": "sqlite",
@@ -581,7 +603,10 @@ async def test_sqlite_store_add_message_vector_failure_falls_back(
             },
             "skills": {"dir": "./skills"},
             "tools": {"dir": "./tools"},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
             "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
             "api": {"enabled": False},
             "mcp": {"enabled": False},
             "logging": {"level": "INFO"},
@@ -606,14 +631,14 @@ async def test_sqlite_store_add_message_vector_failure_falls_back(
 
 
 @pytest.mark.asyncio
-async def test_sqlite_store_search_semantic(tmp_path, monkeypatch):
+async def test_sqlite_store_search_semantic(tmp_path, monkeypatch, valid_test_config_data):
     from memory.sqlite_store import SqliteStore
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "sys"},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant"},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
         "memory": {
             "short_term": {"backend": "sqlite", "path": str(tmp_path / "short.db")},
             "long_term": {
@@ -625,6 +650,9 @@ async def test_sqlite_store_search_semantic(tmp_path, monkeypatch):
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}

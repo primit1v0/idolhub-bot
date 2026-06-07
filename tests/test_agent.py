@@ -6,22 +6,16 @@ from core.config import AppConfig
 
 
 @pytest.mark.asyncio
-async def test_agent_simple_response(monkeypatch):
+async def test_agent_simple_response(monkeypatch, valid_test_config_data):
     # Arrange: Setup mock config
-    cfg = AppConfig.model_validate({
-        "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "You are a test bot", "max_iterations": 3},
-        "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
-        "skills": {"dir": "./skills"},
-        "tools": {"dir": "./tools"},
-        "plugins": {"dir": "./plugins"},
-        "api": {"enabled": False},
-        "mcp": {"enabled": False},
-        "logging": {"level": "INFO"}
-    })
+    config_data = valid_test_config_data.copy()
+    config_data["agent"] = {
+        "system_prompt": "You are a test bot",
+        "max_iterations": 3,
+        "tools_enabled": True,
+        "memory_enabled": True
+    }
+    cfg = AppConfig.model_validate(config_data)
 
     # Mock call_llm agar tidak request ke internet
     async def mock_call_llm(config, messages, tools=None):
@@ -50,22 +44,16 @@ async def test_agent_simple_response(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_agent_memory_tools_execution(monkeypatch):
+async def test_agent_memory_tools_execution(monkeypatch, valid_test_config_data):
     # Arrange: Setup mock config
-    cfg = AppConfig.model_validate({
-        "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "You are a test bot", "max_iterations": 3},
-        "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
-        "skills": {"dir": "./skills"},
-        "tools": {"dir": "./tools"},
-        "plugins": {"dir": "./plugins"},
-        "api": {"enabled": False},
-        "mcp": {"enabled": False},
-        "logging": {"level": "INFO"}
-    })
+    config_data = valid_test_config_data.copy()
+    config_data["agent"] = {
+        "system_prompt": "You are a test bot",
+        "max_iterations": 3,
+        "tools_enabled": True,
+        "memory_enabled": True
+    }
+    cfg = AppConfig.model_validate(config_data)
 
     call_count = 0
     async def mock_call_llm(config, messages, tools=None):
@@ -132,22 +120,16 @@ async def test_agent_memory_tools_execution(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_agent_relevant_facts_injection(monkeypatch):
+async def test_agent_relevant_facts_injection(monkeypatch, valid_test_config_data):
     # Arrange: Setup mock config
-    cfg = AppConfig.model_validate({
-        "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "You are a test bot", "max_iterations": 3},
-        "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
-        "skills": {"dir": "./skills"},
-        "tools": {"dir": "./tools"},
-        "plugins": {"dir": "./plugins"},
-        "api": {"enabled": False},
-        "mcp": {"enabled": False},
-        "logging": {"level": "INFO"}
-    })
+    config_data = valid_test_config_data.copy()
+    config_data["agent"] = {
+        "system_prompt": "You are a test bot",
+        "max_iterations": 3,
+        "tools_enabled": True,
+        "memory_enabled": True
+    }
+    cfg = AppConfig.model_validate(config_data)
 
     captured_messages = []
 
@@ -200,17 +182,20 @@ async def test_agent_relevant_facts_injection(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_agent_fts_injection(monkeypatch):
+async def test_agent_fts_injection(monkeypatch, valid_test_config_data):
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "test", "max_iterations": 3},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant", "max_iterations": 3},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:", "max_messages": 2}, "long_term": {"backend": "none", "path": ""}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:", "max_messages": 2}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -244,17 +229,20 @@ async def test_agent_fts_injection(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_agent_facts_scoring(monkeypatch):
+async def test_agent_facts_scoring(monkeypatch, valid_test_config_data):
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "test", "max_iterations": 3},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant", "max_iterations": 3},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -294,17 +282,20 @@ async def test_agent_facts_scoring(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_agent_prompt_injection_blocking():
+async def test_agent_prompt_injection_blocking(valid_test_config_data):
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "test", "max_iterations": 3},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant", "max_iterations": 3},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -317,17 +308,20 @@ async def test_agent_prompt_injection_blocking():
 
 
 @pytest.mark.asyncio
-async def test_agent_prompt_injection_after_before_message(monkeypatch):
+async def test_agent_prompt_injection_after_before_message(monkeypatch, valid_test_config_data):
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "test", "max_iterations": 3},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant", "max_iterations": 3},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -370,17 +364,20 @@ async def test_agent_prompt_injection_after_before_message(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_agent_memory_gating_unapproved(monkeypatch):
+async def test_agent_memory_gating_unapproved(monkeypatch, valid_test_config_data):
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "test", "max_iterations": 3},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant", "max_iterations": 3},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -408,17 +405,20 @@ async def test_agent_memory_gating_unapproved(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_agent_rrf_merger(monkeypatch):
+async def test_agent_rrf_merger(monkeypatch, valid_test_config_data):
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "test", "max_iterations": 3},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant", "max_iterations": 3},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:", "max_messages": 2}, "long_term": {"backend": "none", "path": ""}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:", "max_messages": 2}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -456,17 +456,18 @@ async def test_agent_rrf_merger(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_agent_tools_filtering():
+async def test_agent_tools_filtering(valid_test_config_data):
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "test", "max_iterations": 3, "tools_enabled": True},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant", "max_iterations": 3, "tools_enabled": True},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools", "enabled": ["search_web", "save_fact"]},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -485,17 +486,20 @@ async def test_agent_tools_filtering():
 
 
 @pytest.mark.asyncio
-async def test_agent_tools_globally_disabled(monkeypatch):
+async def test_agent_tools_globally_disabled(monkeypatch, valid_test_config_data):
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "test", "max_iterations": 3, "tools_enabled": False},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant", "max_iterations": 3, "tools_enabled": False},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -518,17 +522,20 @@ async def test_agent_tools_globally_disabled(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_agent_filter_disabled(monkeypatch):
+async def test_agent_filter_disabled(monkeypatch, valid_test_config_data):
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "test", "max_iterations": 3, "filter_enabled": False},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant", "max_iterations": 3, "filter_enabled": False},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -548,17 +555,20 @@ async def test_agent_filter_disabled(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_agent_gating_disabled(monkeypatch):
+async def test_agent_gating_disabled(monkeypatch, valid_test_config_data):
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "test", "max_iterations": 3, "gating_enabled": False},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant", "max_iterations": 3, "gating_enabled": False},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -602,13 +612,13 @@ async def test_agent_gating_disabled(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_agent_fts_threading_integration(monkeypatch):
+async def test_agent_fts_threading_integration(monkeypatch, valid_test_config_data):
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "test", "max_iterations": 3},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant", "max_iterations": 3},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
         "memory": {
             "short_term": {
                 "backend": "sqlite", 
@@ -616,11 +626,14 @@ async def test_agent_fts_threading_integration(monkeypatch):
                 "max_messages": 2,
                 "fts_context_window": 1
             }, 
-            "long_term": {"backend": "none", "path": ""}
+            "long_term": {"backend": "none", "path": "./data/vectors.db"}
         },
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -662,13 +675,13 @@ async def test_agent_fts_threading_integration(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_agent_semantic_rrf_integration(tmp_path, monkeypatch):
+async def test_agent_semantic_rrf_integration(tmp_path, monkeypatch, valid_test_config_data):
     from memory.sqlite_store import SqliteStore
 
     cfg = AppConfig.model_validate(
         {
             "app": {"name": "test", "mode": "bot"},
-            "telegram": {"token": "test"},
+            "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
             "agent": {
                 "system_prompt": "You are a helpful assistant",
                 "max_iterations": 3,
@@ -678,7 +691,7 @@ async def test_agent_semantic_rrf_integration(tmp_path, monkeypatch):
                 "gating_enabled": False,
             },
             "llm": {"provider": "openai", "model": "gpt-4"},
-            "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+            "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
             "memory": {
                 "short_term": {
                     "backend": "sqlite",
@@ -694,7 +707,10 @@ async def test_agent_semantic_rrf_integration(tmp_path, monkeypatch):
             },
             "skills": {"dir": "./skills"},
             "tools": {"dir": "./tools"},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
             "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
             "api": {"enabled": False},
             "mcp": {"enabled": False},
             "logging": {"level": "INFO"},

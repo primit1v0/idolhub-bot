@@ -8,16 +8,19 @@ def test_get_openai_client():
     # Arrange: mock config
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot", "debug": False, "timezone": "UTC"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "sys"},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant"},
         "llm": {"provider": "openai", "model": "gpt-4", "temperature": 0.0, "max_tokens": 100, "timeout": 30},
         "providers": {
             "openai": {"base_url": "https://api.openai.com/v1", "api_key": "sk-123"}
         },
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO", "format": "text"}
@@ -33,16 +36,19 @@ def test_get_openai_client():
 def test_get_github_copilot_client():
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "sys"},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant"},
         "llm": {"provider": "github_copilot", "model": "gpt-4"},
         "providers": {
             "github_copilot": {"base_url": "https://api.githubcopilot.com", "cli_token": "gho_123"}
         },
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -55,16 +61,19 @@ def test_get_github_copilot_client():
 def test_get_openai_codex_client():
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "sys"},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant"},
         "llm": {"provider": "openai_codex", "model": "gpt-4"},
         "providers": {
             "openai_codex": {"base_url": "https://api.openai.com/v1", "oauth_token": "oauth_123"}
         },
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -77,16 +86,19 @@ def test_get_openai_codex_client():
 def test_get_gemini_client():
     cfg = AppConfig.model_validate({
         "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "sys"},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+        "agent": {"system_prompt": "You are a helpful assistant"},
         "llm": {"provider": "gemini", "model": "gemma-4-31b-it"},
         "providers": {
             "gemini": {"base_url": "https://generativelanguage.googleapis.com/v1beta/openai/", "api_key": "AIzaSy_123"}
         },
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -97,20 +109,23 @@ def test_get_gemini_client():
     assert str(client.base_url).rstrip("/") == "https://generativelanguage.googleapis.com/v1beta/openai"
 
 def test_invalid_provider_raises_error():
-    cfg = AppConfig.model_validate({
-        "app": {"name": "test", "mode": "bot"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "sys"},
-        "llm": {"provider": "unknown", "model": "gpt-4"},
-        "providers": {},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
-        "skills": {"dir": "./skills"},
-        "tools": {"dir": "./tools"},
-        "plugins": {"dir": "./plugins"},
-        "api": {"enabled": False},
-        "mcp": {"enabled": False},
-        "logging": {"level": "INFO"}
-    })
-
-    with pytest.raises(ValueError):
-        get_llm_client(cfg)
+    """Test that validation fails when provider is not in providers dict"""
+    from pydantic import ValidationError
+    
+    with pytest.raises(ValidationError) as exc_info:
+        cfg = AppConfig.model_validate({
+            "app": {"name": "test", "mode": "bot"},
+            "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
+            "agent": {"system_prompt": "You are a helpful assistant"},
+            "llm": {"provider": "unknown", "model": "gpt-4"},
+            "providers": {},
+            "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
+            "skills": {"dir": "./skills"},
+            "tools": {"dir": "./tools"},
+            "plugins": {"dir": "./plugins"},
+            "api": {"enabled": False},
+            "mcp": {"enabled": False},
+            "logging": {"level": "INFO"}
+        })
+    
+    assert "not found in providers" in str(exc_info.value)

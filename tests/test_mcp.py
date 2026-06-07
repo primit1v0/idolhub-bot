@@ -6,19 +6,22 @@ from mcp_server.server import create_mcp_server
 
 
 @pytest.mark.asyncio
-async def test_mcp_server_tool_registry(monkeypatch):
+async def test_mcp_server_tool_registry(monkeypatch, valid_test_config_data):
     from core.config import AppConfig
     
     mock_cfg = AppConfig.model_validate({
         "app": {"name": "test-mcp", "mode": "mcp"},
-        "telegram": {"token": "test"},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
         "agent": {"system_prompt": "You are a test bot", "max_iterations": 3},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": False, "cors_origins": ["*"]},
         "mcp": {"enabled": True, "port": 8001},
         "logging": {"level": "INFO"}

@@ -16,7 +16,21 @@ def register_plugin_to_bus(plugin_instance, event_bus: EventBus):
             event_bus.subscribe(event_name, method)
             logger.info(f"Subscribed method '{method.__name__}' of {type(plugin_instance).__name__} to '{event_name}'")
 
-def load_plugins(plugins_dir: str, event_bus: EventBus):
+def load_plugins(plugins_dir: str, event_bus: EventBus, enabled: list = None):
+    """
+    Load plugins from directory.
+    
+    Args:
+        plugins_dir: Directory containing plugin files
+        event_bus: Event bus to register plugins to
+        enabled: List of enabled plugin names. If empty list, no plugins are loaded.
+                 If None, all plugins are loaded (backward compatibility).
+    """
+    # Check if plugins are disabled (empty list)
+    if enabled is not None and len(enabled) == 0:
+        logger.info("Plugins are disabled (plugins.enabled is empty list)")
+        return
+    
     if not os.path.exists(plugins_dir):
         logger.warning(f"Plugins directory {plugins_dir} does not exist.")
         return

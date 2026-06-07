@@ -8,21 +8,11 @@ from core.config import AppConfig
 
 
 @pytest.fixture
-def mock_cfg():
-    return AppConfig.model_validate({
-        "app": {"name": "test", "mode": "api"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "You are a test bot", "max_iterations": 3},
-        "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
-        "skills": {"dir": "./skills"},
-        "tools": {"dir": "./tools"},
-        "plugins": {"dir": "./plugins"},
-        "api": {"enabled": True, "cors_origins": ["*"]},
-        "mcp": {"enabled": False},
-        "logging": {"level": "INFO"}
-    })
+def mock_cfg(valid_test_config_data):
+    config_data = valid_test_config_data.copy()
+    config_data["app"]["mode"] = "api"
+    config_data["api"] = {"enabled": True, "cors_origins": ["*"]}
+    return AppConfig.model_validate(config_data)
 
 @pytest.fixture
 def client(mock_cfg, monkeypatch):
@@ -96,14 +86,17 @@ def test_update_config(client, monkeypatch, tmp_path):
     temp_config = tmp_path / "config.json"
     temp_config.write_text(json.dumps({
         "app": {"name": "test", "mode": "api"},
-        "telegram": {"token": "test"},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
         "agent": {"system_prompt": "You are a test bot", "max_iterations": 3},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": True, "cors_origins": ["*"]},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -144,14 +137,17 @@ def test_update_config_invalid_fails(client, monkeypatch, tmp_path):
     temp_config = tmp_path / "config.json"
     temp_config.write_text(json.dumps({
         "app": {"name": "test", "mode": "api"},
-        "telegram": {"token": "test"},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
         "agent": {"system_prompt": "You are a test bot", "max_iterations": 3},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": True, "cors_origins": ["*"]},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -183,14 +179,17 @@ def test_update_config_secrets_overwrite_protection(client, monkeypatch, tmp_pat
     temp_config = tmp_path / "config.json"
     temp_config.write_text(json.dumps({
         "app": {"name": "test", "mode": "api"},
-        "telegram": {"token": "my_original_secret_token"},
+        "telegram": {"token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"},
         "agent": {"system_prompt": "You are a test bot", "max_iterations": 3},
         "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
+        "providers": {"openai": {"base_url": "https://api.openai.com/v1", "api_key": "dummy"}},
+        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": "./data/vectors.db"}},
         "skills": {"dir": "./skills"},
         "tools": {"dir": "./tools"},
         "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
         "api": {"enabled": True, "cors_origins": ["*"]},
         "mcp": {"enabled": False},
         "logging": {"level": "INFO"}
@@ -223,7 +222,7 @@ def test_update_config_secrets_overwrite_protection(client, monkeypatch, tmp_pat
     with open(temp_config, "r", encoding="utf-8") as f:
         written_data = json.load(f)
     
-    assert written_data["telegram"]["token"] == "my_original_secret_token"
+    assert written_data["telegram"]["token"] == "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
     assert written_data["app"]["name"] == "updated_app_name"
 
 

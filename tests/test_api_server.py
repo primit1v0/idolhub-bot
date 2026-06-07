@@ -6,21 +6,11 @@ from core.config import AppConfig
 
 
 @pytest.fixture
-def mock_cfg():
-    return AppConfig.model_validate({
-        "app": {"name": "test", "mode": "api"},
-        "telegram": {"token": "test"},
-        "agent": {"system_prompt": "You are a test bot", "max_iterations": 3},
-        "llm": {"provider": "openai", "model": "gpt-4"},
-        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
-        "memory": {"short_term": {"backend": "sqlite", "path": ":memory:"}, "long_term": {"backend": "none", "path": ""}},
-        "skills": {"dir": "./skills"},
-        "tools": {"dir": "./tools"},
-        "plugins": {"dir": "./plugins"},
-        "api": {"enabled": True, "cors_origins": ["*"]},
-        "mcp": {"enabled": False},
-        "logging": {"level": "INFO"}
-    })
+def mock_cfg(valid_test_config_data):
+    config_data = valid_test_config_data.copy()
+    config_data["app"]["mode"] = "api"
+    config_data["api"] = {"enabled": True, "cors_origins": ["*"]}
+    return AppConfig.model_validate(config_data)
 
 @pytest.fixture
 def mock_load_config(mock_cfg, monkeypatch):

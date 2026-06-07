@@ -2,11 +2,16 @@ import logging
 import sys
 
 from core.bot import TelegramBot
-from core.config import load_config
+from core.config_reloader import initialize_config
 
 
-def setup_logging(level_str: str, format_str: str):
+def setup_logging(level_str: str, format_str: str, debug: bool = False):
+    """Setup logging with optional debug mode."""
     numeric_level = getattr(logging, level_str.upper(), logging.INFO)
+    
+    # Override to DEBUG if debug flag is set
+    if debug:
+        numeric_level = logging.DEBUG
     
     if format_str.lower() == "json":
         # Simplified JSON logging for systemd
@@ -21,10 +26,11 @@ def setup_logging(level_str: str, format_str: str):
     # Reduce noise from httpx
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
+
 def main():
     # 1. Load Config & Resolve Env (Fail-fast jika ada yang kurang)
     try:
-        cfg = load_config("config.json")
+        cfg = initialize_config("config.json")
     except KeyError as e:
         print(f"CRITICAL ERROR: Secret untuk {e} tidak ditemukan di environment!")
         print("Pastikan environment atau EnvironmentFile lokal sudah diisi.")
@@ -33,19 +39,33 @@ def main():
         print(f"CRITICAL ERROR: Gagal memuat config: {e}")
         sys.exit(1)
 
-    # 2. Setup Logging
-    setup_logging(cfg.logging.level, cfg.logging.format)
+    # 2. Setup Logging (with debug flag enforcement)
+    setup_logging(cfg.logging.level, cfg.logging.format, cfg.app.debug)
     logger = logging.getLogger("idolhub")
+    
+    if cfg.app.debug:
+        logger.debug("Debug mode enabled - verbose logging active")
     
     # 3. Determine Mode (CLI overrides config)
     if len(sys.argv) > 1:
         mode = sys.argv[1].lower()
     else:
         mode = cfg.app.mode
+    
+    # 4. Validate mode is enabled
+    if mode == "api" and not cfg.api.enabled:
+        logger.error("Cannot run in 'api' mode: api.enabled is False in config")
+        logger.error("Set api.enabled to true or change mode to 'bot' or 'mcp'")
+        sys.exit(1)
+    
+    if mode == "mcp" and not cfg.mcp.enabled:
+        logger.error("Cannot run in 'mcp' mode: mcp.enabled is False in config")
+        logger.error("Set mcp.enabled to true or change mode to 'bot' or 'api'")
+        sys.exit(1)
         
     logger.info(f"Memulai idolhub dalam mode: {mode.upper()}")
 
-    # 4. Dispatch Mode
+    # 5. Dispatch Mode
     if mode == "bot":
         try:
             bot = TelegramBot(cfg)
@@ -63,7 +83,9 @@ def main():
         run_mcp_server()
     else:
         logger.error(f"Mode tidak dikenal: {mode}")
+        logger.error("Mode yang valid: bot, api, mcp")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

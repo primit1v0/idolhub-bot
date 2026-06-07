@@ -144,11 +144,13 @@ class IdolhubAgent:
         self.flow = AsyncFlow(start=self.answer_node)
 
     async def initialize(self):
-        await self.memory.initialize()
+        # Initialize memory only if enabled
+        if self.cfg.agent.memory_enabled:
+            await self.memory.initialize()
         
         # Load Skills & Plugins
         load_skills(self.cfg.skills.dir, self.cfg, self.tools_schema, self.tools_mapping)
-        load_plugins(self.cfg.plugins.dir, self.event_bus)
+        load_plugins(self.cfg.plugins.dir, self.event_bus, self.cfg.plugins.enabled)
 
     async def close(self):
         if hasattr(self, 'memory') and self.memory:
@@ -168,45 +170,52 @@ class IdolhubAgent:
             if filtered["status"] == "BLOCKED":
                 return "Maaf, permintaan Anda tidak dapat diproses demi alasan keamanan."
         
-        history = await self.memory.get_history(user_id)
+        # Get history only if memory is enabled
+        history = []
+        if self.cfg.agent.memory_enabled:
+            history = await self.memory.get_history(user_id)
         
         messages = []
         for msg in history:
             messages.append({"role": msg["role"], "content": msg["content"]})
         messages.append({"role": "user", "content": user_input})
         
-        # 1. Retrieve & Rank Facts
-        facts = await self.memory.get_fakta(user_id, limit=30)
-        query_words = set(re.findall(r'[a-zA-Z0-9]+', user_input.lower()))
+        # 1. Retrieve & Rank Facts (only if memory enabled)
         scored_facts = []
-        for i, fact in enumerate(facts):
-            entity = fact.get("entity", "")
-            entity_words = set(re.findall(r'[a-zA-Z0-9]+', entity.lower()))
-            intersection = query_words.intersection(entity_words)
-            if intersection:
-                sim_score = len(intersection) / len(entity_words) if entity_words else 0.0
-                rec_score = 1.0 - (i / len(facts)) if len(facts) > 1 else 1.0
-                conf_score = fact.get("confidence", 0.9)
-                score = (0.5 * sim_score) + (0.3 * rec_score) + (0.2 * conf_score)
-                scored_facts.append((score, fact))
-        scored_facts.sort(key=lambda x: x[0], reverse=True)
+        if self.cfg.agent.memory_enabled:
+            facts = await self.memory.get_fakta(user_id, limit=30)
+            query_words = set(re.findall(r'[a-zA-Z0-9]+', user_input.lower()))
+            for i, fact in enumerate(facts):
+                entity = fact.get("entity", "")
+                entity_words = set(re.findall(r'[a-zA-Z0-9]+', entity.lower()))
+                intersection = query_words.intersection(entity_words)
+                if intersection:
+                    sim_score = len(intersection) / len(entity_words) if entity_words else 0.0
+                    rec_score = 1.0 - (i / len(facts)) if len(facts) > 1 else 1.0
+                    conf_score = fact.get("confidence", 0.9)
+                    score = (0.5 * sim_score) + (0.3 * rec_score) + (0.2 * conf_score)
+                    scored_facts.append((score, fact))
+            scored_facts.sort(key=lambda x: x[0], reverse=True)
         
-        # 2. Retrieve FTS5 matching messages
-        fts_messages = await self.memory.search_history_fts(user_id, user_input, limit=3)
-        recent_contents = [m["content"] for m in messages[-4:]] if len(messages) >= 4 else [m["content"] for m in messages]
-        unique_fts = [m for m in fts_messages if m.get("matched_content", m["content"]) not in recent_contents]
+        # 2. Retrieve FTS5 matching messages (only if memory enabled)
+        unique_fts = []
+        if self.cfg.agent.memory_enabled:
+            fts_messages = await self.memory.search_history_fts(user_id, user_input, limit=3)
+            recent_contents = [m["content"] for m in messages[-4:]] if len(messages) >= 4 else [m["content"] for m in messages]
+            unique_fts = [m for m in fts_messages if m.get("matched_content", m["content"]) not in recent_contents]
 
-        # 2b. Retrieve semantic matching messages
-        semantic_messages = []
-        if self.cfg.memory.long_term.backend == "sqlite_vec":
+        # 2b. Retrieve semantic matching messages (only if memory enabled)
+        unique_semantic = []
+        if self.cfg.agent.memory_enabled and self.cfg.memory.long_term.backend == "sqlite_vec":
             semantic_messages = await self.memory.search_history_semantic(
                 user_id, user_input, limit=3
             )
-        unique_semantic = [
-            message
-            for message in semantic_messages
-            if message["content"] not in recent_contents
-        ]
+            recent_contents = [m["content"] for m in messages[-4:]] if len(messages) >= 4 else [m["content"] for m in messages]
+            unique_semantic = [
+                message
+                for message in semantic_messages
+                if message["content"] not in recent_contents
+            ]
 
         # 3. Reciprocal Rank Fusion (RRF) Merger
         # We assign rank score = 1 / (60 + rank)
@@ -230,7 +239,9 @@ class IdolhubAgent:
             rrf_md = "Relevant context (RRF ranked):\n" + "\n".join(f"- {item}" for item in top_rrf)
             messages.insert(0, {"role": "system", "content": rrf_md})
         
-        await self.memory.add_message(user_id, "user", user_input)
+        # Add message to memory only if enabled
+        if self.cfg.agent.memory_enabled:
+            await self.memory.add_message(user_id, "user", user_input)
         
         await self.event_bus.emit("after_message", ctx)
         
@@ -255,7 +266,9 @@ class IdolhubAgent:
         await self.event_bus.emit("before_reply", ctx)
         final_text = ctx.get("response", final_text)
         
-        await self.memory.add_message(user_id, "assistant", final_text)
+        # Add assistant message to memory only if enabled
+        if self.cfg.agent.memory_enabled:
+            await self.memory.add_message(user_id, "assistant", final_text)
         
         await self.event_bus.emit("after_reply", ctx)
         return final_text
