@@ -1,9 +1,11 @@
 import logging
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
-from core.config import AppConfig
+from telegram import Update
+from telegram.error import BadRequest
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+
 from core.agent import IdolhubAgent
+from core.config import AppConfig
 
 logger = logging.getLogger(__name__)
 
@@ -74,10 +76,17 @@ class TelegramBot:
             response = await self.agent.run(user_id=str(user.id), user_input=user_text)
             
             # 2. Kirim balasan ke user
-            await update.message.reply_text(
-                text=response,
-                parse_mode=self.cfg.telegram.parse_mode
-            )
+            try:
+                await update.message.reply_text(
+                    text=response,
+                    parse_mode=self.cfg.telegram.parse_mode
+                )
+            except BadRequest as e:
+                logger.warning(f"Gagal mengirim dengan parse_mode={self.cfg.telegram.parse_mode} ({e}). Mencoba mengirim sebagai plain text.")
+                await update.message.reply_text(
+                    text=response,
+                    parse_mode=None
+                )
         except Exception as e:
             logger.error(f"Error saat memproses pesan: {e}", exc_info=True)
             await update.message.reply_text("Maaf, terjadi kesalahan saat memproses permintaan Anda.")

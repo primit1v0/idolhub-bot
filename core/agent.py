@@ -1,15 +1,18 @@
-import json
 import inspect
+import json
 import re
-from pocketflow import AsyncNode, AsyncFlow
+
+from pocketflow import AsyncFlow, AsyncNode
+
 from core.config import AppConfig
-from core.llm import call_llm
-from memory.sqlite_store import SqliteStore
-from tools.registry import TOOLS_SCHEMA, TOOLS_MAPPING
 from core.event_bus import EventBus
+from core.llm import call_llm
+from core.rag_filter import filter_query
+from memory.sqlite_store import SqliteStore
 from plugins.loader import load_plugins
 from skills.loader import load_skills
-from core.rag_filter import filter_query
+from tools.registry import TOOLS_MAPPING, TOOLS_SCHEMA
+
 
 class AnswerNode(AsyncNode):
     def __init__(self, cfg: AppConfig):
@@ -88,6 +91,8 @@ class ToolExecutionNode(AsyncNode):
                     extra_args["memory"] = self.memory
                 if "user_input" in sig.parameters:
                     extra_args["user_input"] = user_input
+                if "gating_enabled" in sig.parameters:
+                    extra_args["gating_enabled"] = self.cfg.agent.gating_enabled
                 
                 func_result = func(**{**args, **extra_args})
                 if inspect.iscoroutine(func_result):
@@ -112,8 +117,17 @@ class IdolhubAgent:
     def __init__(self, cfg: AppConfig):
         self.cfg = cfg
         self.event_bus = EventBus()
-        self.tools_schema = list(TOOLS_SCHEMA)
-        self.tools_mapping = dict(TOOLS_MAPPING)
+        
+        # Filter tools based on config.json (load all if enabled is empty)
+        self.tools_schema = []
+        self.tools_mapping = {}
+        enabled_tools = self.cfg.tools.enabled
+        for schema in TOOLS_SCHEMA:
+            name = schema["function"]["name"]
+            if not enabled_tools or name in enabled_tools:
+                self.tools_schema.append(schema)
+                self.tools_mapping[name] = TOOLS_MAPPING[name]
+                
         self.memory = SqliteStore(self.cfg)
         self._build_flow()
 
@@ -149,9 +163,10 @@ class IdolhubAgent:
         user_input = ctx.get("user_input", user_input)
 
         # Check prompt injection
-        filtered = filter_query(user_input)
-        if filtered["status"] == "BLOCKED":
-            return "Maaf, permintaan Anda tidak dapat diproses demi alasan keamanan."
+        if self.cfg.agent.filter_enabled:
+            filtered = filter_query(user_input)
+            if filtered["status"] == "BLOCKED":
+                return "Maaf, permintaan Anda tidak dapat diproses demi alasan keamanan."
         
         history = await self.memory.get_history(user_id)
         
@@ -205,7 +220,7 @@ class IdolhubAgent:
         
         shared = {
             "messages": messages,
-            "tools_schema": self.tools_schema,
+            "tools_schema": self.tools_schema if self.cfg.agent.tools_enabled else [],
             "user_id": user_id,
             "user_input": user_input,
             "iters": 0

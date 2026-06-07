@@ -1,5 +1,7 @@
 from openai import AsyncOpenAI
+
 from core.config import AppConfig
+
 
 def get_llm_client(cfg: AppConfig) -> AsyncOpenAI:
     """

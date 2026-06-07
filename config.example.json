@@ -16,7 +16,9 @@
     "max_iterations": 10,
     "_max_iterations_doc": "Batas loop agent sebelum force-stop (cegah infinite loop)",
     "tools_enabled": true,
-    "memory_enabled": true
+    "memory_enabled": true,
+    "filter_enabled": true,
+    "gating_enabled": true
   },
 
   "telegram": {
@@ -70,7 +72,13 @@
       "_backend_options": "sqlite",
       "path": "./data/memory.db",
       "max_messages": 50,
-      "_max_messages_doc": "Jumlah pesan terakhir yang disimpan per user per sesi"
+      "_max_messages_doc": "Jumlah pesan terakhir yang dimuat untuk konteks aktif percakapan",
+      "fts_context_window": 2,
+      "_fts_context_window_doc": "Jumlah pesan sebelum/sesudah pesan FTS5 yang diambil",
+      "auto_prune_enabled": true,
+      "_auto_prune_enabled_doc": "Aktifkan pembersihan database otomatis",
+      "auto_prune_limit": 1000,
+      "_auto_prune_limit_doc": "Batas maksimum jumlah pesan di DB sebelum dipotong"
     },
     "long_term": {
       "backend": "none",

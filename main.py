@@ -1,7 +1,9 @@
-import sys
 import logging
-from core.config import load_config
+import sys
+
 from core.bot import TelegramBot
+from core.config import load_config
+
 
 def setup_logging(level_str: str, format_str: str):
     numeric_level = getattr(logging, level_str.upper(), logging.INFO)

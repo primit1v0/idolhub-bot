@@ -1,9 +1,6 @@
-import os
-import pytest
-from core.config import AppConfig
 from core.event_bus import EventBus
-from plugins.loader import load_plugins
-from skills.loader import parse_skill_file, make_tool_schema, load_skills
+from skills.loader import make_tool_schema, parse_skill_file
+
 
 def test_event_bus_subscribe_emit():
     bus = EventBus()

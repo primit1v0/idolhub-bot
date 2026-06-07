@@ -1,7 +1,9 @@
 # tests/test_mcp.py
 import pytest
 from mcp.server.fastmcp import FastMCP
+
 from mcp_server.server import create_mcp_server
+
 
 @pytest.mark.asyncio
 async def test_mcp_server_tool_registry(monkeypatch):

@@ -183,7 +183,7 @@ Paralel:
 
 - **Default Workspace Only**: Agent hanya dapat bekerja, membaca, dan menulis di dalam folder `workspace` yang telah ditentukan. Agent tidak bisa keluar dari batasan ini.
 - **Bubblewrap (bwrap) Enforcement**: Setiap perintah terminal yang dieksekusi oleh agent dibungkus ke dalam *ephemeral container* menggunakan `bwrap`.
-- **Isolasi Konfigurasi**: `bwrap` akan melakukan *bind-mount* `tmpfs` kosong di atas direktori *parent* dari workspace. Artinya, meskipun agent mengeksekusi `ls ../`, mereka tidak akan melihat `config.json`, `/etc/idolhub/secrets.env`, atau konfigurasi bot lainnya.
+- **Isolasi Konfigurasi & Database**: `bwrap` akan melakukan *bind-mount* `tmpfs` kosong di atas direktori *parent* dari workspace (yaitu direktori utama `idolhub`). Artinya, meskipun agent mengeksekusi `ls ../`, mereka tidak akan melihat `config.json`, source code utama, maupun berkas database lokal (`data/memory.db`). Ini mencegah agent membaca/menulis ke database memori utama secara langsung via terminal shell (eksekusi write/read hanya diperbolehkan melalui API tool terprogram seperti `save_fact` dan `set_preference`).
 - **Zero Configuration**: Fitur sandbox ini aktif secara default untuk semua eksekusi shell dan tidak bisa dimatikan via `config.json`.
 
 
@@ -332,13 +332,19 @@ Drop ke `plugins/` folder → auto-loaded saat startup.
 - Max N messages (configurable, default 50)
 - Persistent across restarts
 
-### Long-term (ChromaDB)
-- Vector embedding dari conversation penting
-- Semantic search: agent bisa recall info relevan dari history jauh
-- Embedding model: text-embedding-3-small (OpenAI) atau lokal
+### Long-term (sqlite-vec)
+- Menggunakan ekstensi SQLite `sqlite-vec` yang ringan untuk pemrosesan semantik lokal langsung di dalam file SQLite
+- Vector embedding disimpan dalam format tabel virtual `vec_messages`
+- Semantic search: agent bisa recall info relevan dari history jauh secara cepat tanpa overhead dependency eksternal yang besar (seperti ChromaDB)
+
+### Rencana Optimasi Memori (Tahap Implementasi Baru)
+Untuk meningkatkan efisiensi dan kualitas pencarian memori, direncanakan 3 optimasi berikut:
+1. **FTS5 Context Threading:** Saat pencarian kata kunci (FTS5) menemukan kecocokan pesan lama, sistem akan mengambil beberapa pesan sebelum dan setelahnya (utas/thread konteks) agar LLM memahami situasi percakapan penuh saat itu, bukan hanya pesan tunggal yang terpotong.
+2. **Database Auto-Pruning:** Melakukan pemotongan (pruning) tabel pesan secara otomatis dan berkala berdasarkan batas maksimum baris (misal: 1000 pesan teratas per user) untuk mencegah database membengkak dan menurunkan performa query.
+3. **SQLite Vector Memory (via sqlite-vec):** Implementasi memori semantik lokal penuh menggunakan ekstensi `sqlite-vec` di SQLite, menggantikan opsi ChromaDB secara total untuk menjaga prinsip *Zero Bloatware*.
 
 ### Tambahan Perkembangan Memori (Deterministic Facts & FTS5)
-Terinspirasi dari repositori `mrktt`, kami menambahkan arsitektur memori hibrida yang sangat ringan dan tanpa dependensi pihak ketiga:
+Terinformasi dari repositori `mrktt`, kami menambahkan arsitektur memori hibrida yang sangat ringan dan tanpa dependensi pihak ketiga:
 - **Tabel Fakta (Deterministic EAV):** Menyimpan data faktual/preferensi pengguna dalam format `fakta(id, entity, nilai, confidence, source, created_at, updated_at)` dan `preferensi(kunci, nilai, updated_at)`.
 - **FTS5 Indexing:** Menggunakan virtual table FTS5 bawaan SQLite untuk pencarian kata kunci pada memori jangka panjang tanpa memerlukan Vector DB.
 - **Memory Gating & Safe Writes (`memory_gate.py`):** Menyaring penulisan fakta/preferensi ke memori agar terhindar dari *poisoning* dengan memeriksa kata kunci perintah berbahaya (`rm`, `execute`, `curl`, dll.) serta memicu penulisan memori hanya atas persetujuan atau instruksi eksplisit pengguna (misal: mengandung kata kunci `SIMPAN KE MEMORI`).

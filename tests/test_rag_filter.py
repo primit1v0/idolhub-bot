@@ -1,5 +1,5 @@
-import pytest
 from core.rag_filter import filter_query
+
 
 def test_filter_query_allowed():
     # Benign queries

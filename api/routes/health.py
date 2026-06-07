@@ -1,5 +1,6 @@
 from fastapi import APIRouter
-from tools.heartbeat import get_ram_usage_mb, get_disk_usage_gb, get_cpu_load
+
+from tools.heartbeat import get_cpu_load, get_disk_usage_gb, get_ram_usage_mb
 
 router = APIRouter()
 

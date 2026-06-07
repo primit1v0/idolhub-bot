@@ -1,18 +1,19 @@
 # Laporan Audit Keamanan - idolhub
 
-**Tanggal Audit:** 2026-06-06  
+**Tanggal Audit:** 2026-06-07  
 **Target:** `idolhub` (Personal Assistant Bot via Telegram + API + MCP)  
 **Tools yang Digunakan:**
 1. **pip-audit** (Google/PyPA CVE Scanner via OSV Database)
 2. **Safety** (CVE / Dependency Scan)
 3. **Bandit** (Security Linter for Python)
 4. **Semgrep** (Static Application Security Testing - SAST)
+5. **Ruff** (Code Quality & Dead Code Linter)
 
 ---
 
 ## Ringkasan Eksekutif
 
-Proses audit keamanan komprehensif fase kedua telah diselesaikan setelah melakukan perbaikan menyeluruh (*remediation*) terhadap temuan-temuan sebelumnya dan menerapkan fitur tambahan penyimpanan fakta (EAV).
+Proses audit keamanan komprehensif fase kedua telah diselesaikan setelah melakukan perbaikan menyeluruh (*remediation*) terhadap temuan-temuan sebelumnya, menerapkan fitur tambahan penyimpanan fakta (EAV), serta melakukan pembersihan impor mati (*dead imports*) untuk memenuhi spesifikasi Zero Dead Code.
 
 ### Ringkasan Temuan Akhir
 | Kategori Tool | Temuan Awal | Temuan Akhir | Status / Dampak | Deskripsi Sisa / Perubahan |
@@ -21,6 +22,7 @@ Proses audit keamanan komprehensif fase kedua telah diselesaikan setelah melakuk
 | **Safety** | 0 | **0** | ✅ Clean (Lolos) | 0 kerentanan terdeteksi pada dependensi `requirements.txt`. |
 | **Semgrep** | 3 | **0** | ✅ Clean (Lolos) | Seluruh temuan *blocking* telah diperbaiki dan diverifikasi bersih. |
 | **Bandit** | 99 | **139 (Low), 5 (Medium)** | ✅ Clean (Lolos) | 0 temuan tingkat High pada kode produksi. Temuan medium/low adalah `/tmp` di sandbox/tests dan `assert` di unit tests. |
+| **Ruff** | 14 | **0** | ✅ Clean (Lolos) | 14 unused imports telah dihapus sepenuhnya dari kode sumber dan pengujian. |
 
 ---
 
@@ -88,6 +90,16 @@ Berikut adalah rincian tambahan fitur penyimpanan yang terinspirasi dari riset r
 ### 4. Reciprocal Rank Fusion (RRF) Merger — **[IMPLEMENTED]**
 * **Tambahan Fitur:** Menggabungkan pencarian fakta EAV dan riwayat pesan FTS5 menggunakan skema penilaian Reciprocal Rank Fusion (RRF) di [core/agent.py](file:///opt/idolhub/core/agent.py) ke dalam satu system message prompt yang teratur.
 * **Verifikasi:** Uji coba RRF merger di [tests/test_agent.py](file:///opt/idolhub/tests/test_agent.py) berhasil diverifikasi dan lulus pengujian (**pytest PASS**).
+
+### 5. Pembersihan Impor Mati & Analisis Isolasi Sandbox — **[COMPLETED]**
+* **Tambahan Fitur:** Melakukan audit impor mati (*unused imports*) dan menghapusnya dari 14 lokasi berkas kode utama dan pengujian untuk mematuhi aturan ketat **Zero Dead Code** ([docs/CONTRIBUTING.md](file:///opt/idolhub/docs/CONTRIBUTING.md)). Melakukan analisis dan klarifikasi terdokumentasi mengenai perilaku isolasi Bubblewrap (`bwrap`) yang menyembunyikan berkas database utama `data/memory.db` dari eksekusi perintah terminal langsung di sandbox demi alasan keamanan.
+* **Verifikasi:** Ruff linter mengonfirmasi 0 impor mati/variabel sisa, dan seluruh unit test (**48/48 passed**) berhasil dijalankan pasca-perubahan (**pytest PASS**).
+
+### 6. Integrasi First-Class Web Search Tool & Konfigurasi via `config.json` — **[IMPLEMENTED]**
+* **Tambahan Fitur:** Diimplementasikan fungsi `search_web` di [tools/registry.py](file:///opt/idolhub/tools/registry.py) untuk memberikan kemampuan pencarian web deterministik bagi Agent. Selain itu, diimplementasikan integrasi konfigurasi dinamis di [core/agent.py](file:///opt/idolhub/core/agent.py) sehingga:
+  - Seluruh registry tools dapat difilter/diaktifkan secara selektif via `"tools": {"enabled": [...]}` di `config.json`.
+  - Tool-calling dapat dinonaktifkan secara global melalui konfigurasi `"agent": {"tools_enabled": false}`.
+* **Verifikasi:** Unit test baru di [tests/test_search.py](file:///opt/idolhub/tests/test_search.py) dan pengujian integrasi konfigurasi filter di [tests/test_agent.py](file:///opt/idolhub/tests/test_agent.py) telah ditambahkan dan lulus pengujian (**pytest PASS**).
 
 ---
 *Laporan ini diperbarui secara otomatis setelah keberhasilan audit ulang siklus penambahan fitur memori.*

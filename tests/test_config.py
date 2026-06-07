@@ -1,6 +1,7 @@
-import os
 import pytest
-from core.config import resolve_env, AppConfig, load_config
+
+from core.config import AppConfig, load_config, resolve_env
+
 
 def test_resolve_env_success(monkeypatch):
     monkeypatch.setenv("DUMMY_TOKEN", "12345")

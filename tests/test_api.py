@@ -1,8 +1,11 @@
 # tests/test_api.py
-from fastapi.testclient import TestClient
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+from fastapi.testclient import TestClient
+
 from core.config import AppConfig
+
 
 @pytest.fixture
 def mock_cfg():

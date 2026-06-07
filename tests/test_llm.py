@@ -1,6 +1,8 @@
 import pytest
-from core.llm import get_llm_client
+
 from core.config import AppConfig
+from core.llm import get_llm_client
+
 
 def test_get_openai_client():
     # Arrange: mock config

@@ -1,7 +1,8 @@
 # mcp/server.py
-from mcp.server.fastmcp import FastMCP
 import logging
 import sys
+
+from mcp.server.fastmcp import FastMCP
 
 from core.config import load_config
 from tools.registry import execute_bash

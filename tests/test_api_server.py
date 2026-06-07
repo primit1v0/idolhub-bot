@@ -1,6 +1,9 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
+
 from core.config import AppConfig
+
 
 @pytest.fixture
 def mock_cfg():
@@ -23,7 +26,6 @@ def mock_cfg():
 def mock_load_config(mock_cfg, monkeypatch):
     # Patch core.config.load_config so import-time creation of the default app gets mock_cfg
     with patch("core.config.load_config", return_value=mock_cfg):
-        from api.server import load_config
         # Patch api.server.load_config for runtime create_app calls in other tests
         monkeypatch.setattr("api.server.load_config", lambda: mock_cfg)
         yield

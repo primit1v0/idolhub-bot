@@ -1,7 +1,8 @@
-import os
 import importlib.util
-import sys
 import logging
+import os
+import sys
+
 from core.event_bus import EventBus
 
 logger = logging.getLogger("idolhub.plugins")

@@ -1,6 +1,7 @@
-import pytest
 import os
+
 from tools.sandbox import wrap_bwrap
+
 
 def test_wrap_bwrap_formatting():
     command = "ls -la"
@@ -26,7 +27,7 @@ def test_wrap_bwrap_formatting():
     assert f"--tmpfs {parent_dir}" in wrapped_str
     
     # Harus execute shell command di akhir
-    assert wrapped_str.endswith(f"-- sh -c 'ls -la'")
+    assert wrapped_str.endswith("-- sh -c 'ls -la'")
     
     # Chdir harus benar
     assert f"--chdir {cwd}" in wrapped_str

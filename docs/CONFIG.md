@@ -116,7 +116,10 @@ Hanya provider yang dipilih di `llm.provider` yang aktif. Sisanya diabaikan.
 |---|---|---|---|
 | `backend` | string | `"sqlite"` | Backend: `sqlite` |
 | `path` | string | `"./data/memory.db"` | Path file SQLite |
-| `max_messages` | int | `50` | Max pesan disimpan per user |
+| `max_messages` | int | `50` | Max pesan yang dimuat untuk konteks aktif percakapan |
+| `fts_context_window` | int | `2` | Jumlah pesan sebelum/sesudah pesan FTS5 yang ikut diambil sebagai utas konteks |
+| `auto_prune_enabled` | bool | `true` | Mengaktifkan pembersihan otomatis (auto-pruning) untuk histori lama |
+| `auto_prune_limit` | int | `1000` | Batas maksimum jumlah pesan yang disimpan di DB sebelum dipotong |
 
 #### `memory.long_term`
 
@@ -126,7 +129,7 @@ Hanya provider yang dipilih di `llm.provider` yang aktif. Sisanya diabaikan.
 | `path` | string | `"./data/vectors.db"` | Path file vector DB |
 
 > **Phase 1**: `long_term.backend = "none"` — tidak ada vector memory.
-> **Phase 2**: Ganti ke `"sqlite_vec"` + `uv sync --extra vector`.
+> **Phase 2**: Ganti ke `"sqlite_vec"` + `uv sync --extra vector`. Vector memory menggunakan ekstensi SQLite `sqlite-vec` yang ringan untuk pemrosesan semantik lokal di dalam file database yang sama atau terpisah.
 
 ---
 

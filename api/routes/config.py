@@ -1,8 +1,10 @@
 # api/routes/config.py
-from fastapi import APIRouter, Request, HTTPException
-import json
 import copy
-from core.config import load_config, AppConfig, _resolve_dict
+import json
+
+from fastapi import APIRouter, HTTPException, Request
+
+from core.config import AppConfig, _resolve_dict, load_config
 
 router = APIRouter()
 

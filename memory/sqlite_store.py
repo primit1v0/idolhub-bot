@@ -1,8 +1,11 @@
-import aiosqlite
 import os
 import re
-from typing import List, Dict
+from typing import Dict, List
+
+import aiosqlite
+
 from core.config import AppConfig
+
 
 def calculate_jaccard(text1: str, text2: str) -> float:
     words1 = set(re.findall(r'[a-zA-Z0-9]+', text1.lower()))

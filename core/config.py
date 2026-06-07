@@ -1,8 +1,10 @@
+import json
 import os
 import re
-import json
 from typing import Any, Dict, List, Literal, Optional
+
 from pydantic import BaseModel, Field
+
 
 def resolve_env(value: str) -> str:
     """Resolve $VAR_NAME tokens in a string using os.environ."""
@@ -44,6 +46,8 @@ class AgentSection(BaseModel):
     max_iterations: int = 10
     tools_enabled: bool = True
     memory_enabled: bool = True
+    filter_enabled: bool = True
+    gating_enabled: bool = True
 
 class TelegramSection(BaseModel):
     token: str
@@ -67,6 +71,9 @@ class ShortTermMemory(BaseModel):
     backend: Literal["sqlite"] = "sqlite"
     path: str = "./data/memory.db"
     max_messages: int = 50
+    fts_context_window: int = 2
+    auto_prune_enabled: bool = True
+    auto_prune_limit: int = 1000
 
 class LongTermMemory(BaseModel):
     backend: Literal["none", "sqlite_vec"] = "none"

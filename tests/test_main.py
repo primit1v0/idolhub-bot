@@ -1,9 +1,11 @@
 import sys
 from unittest.mock import MagicMock, patch
+
 import pytest
 
-from main import main
 from core.config import AppConfig
+from main import main
+
 
 @pytest.fixture
 def mock_cfg():
