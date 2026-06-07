@@ -201,5 +201,50 @@ async def test_fts5_search(tmp_path):
     await store.close()
 
 
+@pytest.mark.asyncio
+async def test_fts5_context_threading(tmp_path):
+    cfg = AppConfig.model_validate({
+        "app": {"name": "test", "mode": "bot"},
+        "telegram": {"token": "test"},
+        "agent": {"system_prompt": "test", "max_iterations": 3},
+        "llm": {"provider": "openai", "model": "gpt-4"},
+        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "memory": {
+            "short_term": {
+                "backend": "sqlite", 
+                "path": str(tmp_path / "test.fts_thread.db"),
+                "fts_context_window": 1
+            }, 
+            "long_term": {"backend": "none", "path": ""}
+        },
+        "skills": {"dir": "./skills"},
+        "tools": {"dir": "./tools"},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "mcp": {"enabled": False},
+        "logging": {"level": "INFO"}
+    })
+    store = SqliteStore(cfg)
+    await store.initialize()
+    
+    # Add chronological messages
+    await store.add_message("user_fts", "user", "Message 1")
+    await store.add_message("user_fts", "assistant", "Message 2")
+    await store.add_message("user_fts", "user", "Message 3 (match me)")
+    await store.add_message("user_fts", "assistant", "Message 4")
+    
+    # Search FTS5
+    matches = await store.search_history_fts("user_fts", "match")
+    assert len(matches) == 1
+    assert matches[0]["role"] == "user"
+    assert matches[0]["matched_content"] == "Message 3 (match me)"
+    # Window is 1, so it should fetch Message 2 (id = 2), Message 3 (id = 3), Message 4 (id = 4)
+    expected_thread = "[assistant]: Message 2\n[user]: Message 3 (match me)\n[assistant]: Message 4"
+    assert matches[0]["content"] == expected_thread
+    
+    await store.close()
+
+
+
 
 

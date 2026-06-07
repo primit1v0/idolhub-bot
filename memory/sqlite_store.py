@@ -25,6 +25,7 @@ class SqliteStore:
     def __init__(self, cfg: AppConfig):
         self.db_path = cfg.memory.short_term.path
         self.max_messages = cfg.memory.short_term.max_messages
+        self.fts_context_window = cfg.memory.short_term.fts_context_window
         self.db = None
 
     async def initialize(self):
@@ -215,14 +216,46 @@ class SqliteStore:
         match_expr = " OR ".join(words)
         
         sql = '''
-            SELECT role, content FROM messages_fts 
-            WHERE user_id = ? AND messages_fts MATCH ? 
-            LIMIT ?
+            WITH matches AS (
+                SELECT rowid AS match_id, role AS match_role, content AS match_content
+                FROM messages_fts
+                WHERE user_id = ? AND messages_fts MATCH ?
+                LIMIT ?
+            )
+            SELECT 
+                m.id, 
+                m.role, 
+                m.content,
+                matches.match_id,
+                matches.match_role,
+                matches.match_content
+            FROM messages m
+            JOIN matches ON m.user_id = ? AND m.id BETWEEN (matches.match_id - ?) AND (matches.match_id + ?)
+            ORDER BY matches.match_id ASC, m.id ASC
         '''
         try:
-            async with self.db.execute(sql, (str(user_id), match_expr, limit)) as cursor:
+            async with self.db.execute(sql, (str(user_id), match_expr, limit, str(user_id), self.fts_context_window, self.fts_context_window)) as cursor:
                 rows = await cursor.fetchall()
-            return [{"role": r[0], "content": r[1]} for r in rows]
+                
+            from collections import defaultdict
+            grouped = defaultdict(list)
+            metadata = {}
+            for r in rows:
+                msg_id, role, content, match_id, m_role, m_content = r
+                grouped[match_id].append((role, content))
+                metadata[match_id] = (m_role, m_content)
+                
+            results = []
+            for match_id in sorted(grouped.keys()):
+                thread_msgs = grouped[match_id]
+                m_role, m_content = metadata[match_id]
+                formatted_lines = [f"[{role}]: {content}" for role, content in thread_msgs]
+                results.append({
+                    "role": m_role,
+                    "content": "\n".join(formatted_lines),
+                    "matched_content": m_content
+                })
+            return results
         except aiosqlite.OperationalError:
             # Fallback jika FTS5 query format bermasalah
             return []
