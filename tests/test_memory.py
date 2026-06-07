@@ -351,6 +351,41 @@ async def test_memory_auto_prune_disabled(tmp_path):
     await store.close()
 
 
+@pytest.mark.asyncio
+async def test_sqlite_store_vector_init(tmp_path):
+    from memory.sqlite_store import SqliteStore
+    cfg = AppConfig.model_validate({
+        "app": {"name": "test", "mode": "bot"},
+        "telegram": {"token": "test"},
+        "agent": {"system_prompt": "sys"},
+        "llm": {"provider": "openai", "model": "gpt-4"},
+        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "memory": {
+            "short_term": {"backend": "sqlite", "path": str(tmp_path / "short.db")},
+            "long_term": {
+                "backend": "sqlite_vec",
+                "path": str(tmp_path / "long.db"),
+                "embedding_model": "text-embedding-3-small"
+            }
+        },
+        "skills": {"dir": "./skills"},
+        "tools": {"dir": "./tools"},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "mcp": {"enabled": False},
+        "logging": {"level": "INFO"}
+    })
+    store = SqliteStore(cfg)
+    await store.initialize()
+    assert store.vec_db is not None
+    # Verify tables exist
+    async with store.vec_db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='semantic_messages'") as cursor:
+        row = await cursor.fetchone()
+        assert row is not None
+    await store.close()
+
+
+
 
 
 

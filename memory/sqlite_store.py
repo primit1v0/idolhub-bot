@@ -3,6 +3,7 @@ import re
 from typing import Dict, List
 
 import aiosqlite
+import sqlite_vec
 
 from core.config import AppConfig
 
@@ -23,12 +24,17 @@ class SqliteStore:
     Menyimpan history obrolan berdasarkan user_id secara persisten tapi cepat.
     """
     def __init__(self, cfg: AppConfig):
+        self.cfg = cfg
         self.db_path = cfg.memory.short_term.path
         self.max_messages = cfg.memory.short_term.max_messages
         self.fts_context_window = cfg.memory.short_term.fts_context_window
         self.auto_prune_enabled = getattr(cfg.memory.short_term, "auto_prune_enabled", True)
         self.auto_prune_limit = getattr(cfg.memory.short_term, "auto_prune_limit", 1000)
+        self.long_term_backend = cfg.memory.long_term.backend
+        self.long_term_path = cfg.memory.long_term.path
+        self.embedding_model = cfg.memory.long_term.embedding_model
         self.db = None
+        self.vec_db = None
 
     async def initialize(self):
         """Membuat tabel jika belum ada."""
@@ -103,6 +109,29 @@ class SqliteStore:
             END;
         ''')
         await self.db.commit()
+
+        if self.long_term_backend == "sqlite_vec":
+            if self.long_term_path != ":memory:":
+                os.makedirs(os.path.dirname(os.path.abspath(self.long_term_path)), exist_ok=True)
+            self.vec_db = await aiosqlite.connect(self.long_term_path)
+            await self.vec_db.enable_load_extension(True)
+            await self.vec_db.load_extension(sqlite_vec.loadable_path())
+            await self.vec_db.execute('''
+                CREATE TABLE IF NOT EXISTS semantic_messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            await self.vec_db.execute('''
+                CREATE VIRTUAL TABLE IF NOT EXISTS vec_messages USING vec0(
+                    rowid INTEGER PRIMARY KEY,
+                    embedding float[1536]
+                )
+            ''')
+            await self.vec_db.commit()
 
     async def add_message(self, user_id: str, role: str, content: str):
         """Menambah pesan ke database untuk user tertentu dengan deduplikasi."""
@@ -281,3 +310,5 @@ class SqliteStore:
         """Tutup koneksi database."""
         if self.db:
             await self.db.close()
+        if hasattr(self, "vec_db") and self.vec_db:
+            await self.vec_db.close()
