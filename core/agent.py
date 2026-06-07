@@ -194,7 +194,7 @@ class IdolhubAgent:
         # 2. Retrieve FTS5 matching messages
         fts_messages = await self.memory.search_history_fts(user_id, user_input, limit=3)
         recent_contents = [m["content"] for m in messages[-4:]] if len(messages) >= 4 else [m["content"] for m in messages]
-        unique_fts = [m for m in fts_messages if m["content"] not in recent_contents]
+        unique_fts = [m for m in fts_messages if m.get("matched_content", m["content"]) not in recent_contents]
 
         # 3. Reciprocal Rank Fusion (RRF) Merger
         # We assign rank score = 1 / (60 + rank)

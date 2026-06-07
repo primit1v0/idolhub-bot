@@ -601,6 +601,67 @@ async def test_agent_gating_disabled(monkeypatch):
     await agent.close()
 
 
+@pytest.mark.asyncio
+async def test_agent_fts_threading_integration(monkeypatch):
+    cfg = AppConfig.model_validate({
+        "app": {"name": "test", "mode": "bot"},
+        "telegram": {"token": "test"},
+        "agent": {"system_prompt": "test", "max_iterations": 3},
+        "llm": {"provider": "openai", "model": "gpt-4"},
+        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "memory": {
+            "short_term": {
+                "backend": "sqlite", 
+                "path": ":memory:", 
+                "max_messages": 2,
+                "fts_context_window": 1
+            }, 
+            "long_term": {"backend": "none", "path": ""}
+        },
+        "skills": {"dir": "./skills"},
+        "tools": {"dir": "./tools"},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "mcp": {"enabled": False},
+        "logging": {"level": "INFO"}
+    })
+
+    captured_messages = []
+    async def mock_call_llm(config, messages, tools=None):
+        nonlocal captured_messages
+        captured_messages = list(messages)
+        return {"type": "text", "content": "Mock response"}
+
+    monkeypatch.setattr("core.agent.call_llm", mock_call_llm)
+
+    agent = IdolhubAgent(cfg)
+    await agent.initialize()
+
+    user_id = "user_fts_thread_agent"
+    
+    # Seed past messages chronologically
+    await agent.memory.add_message(user_id, "user", "Saya lapar sekali")
+    await agent.memory.add_message(user_id, "assistant", "Kamu mau makan apa?")
+    await agent.memory.add_message(user_id, "user", "Mau makan nasi goreng saja")
+    await agent.memory.add_message(user_id, "assistant", "Nasi goreng adalah pilihan yang bagus.")
+    await agent.memory.add_message(user_id, "user", "Bagaimana cuaca hari ini?") # Distractor to move target message out of max_messages
+    
+    # Act
+    await agent.run(user_id=user_id, user_input="Saya lapar nasi goreng")
+    
+    # Assert
+    assert len(captured_messages) > 0
+    # The relevant context must contain the formatted thread
+    system_msg = next((msg["content"] for msg in captured_messages if msg["role"] == "system" and "Relevant context (RRF ranked):" in msg["content"]), None)
+    assert system_msg is not None
+    assert "[assistant]: Kamu mau makan apa?" in system_msg
+    assert "[user]: Mau makan nasi goreng saja" in system_msg
+    assert "[assistant]: Nasi goreng adalah pilihan yang bagus." in system_msg
+
+    await agent.close()
+
+
+
 
 
 
