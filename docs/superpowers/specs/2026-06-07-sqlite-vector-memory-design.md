@@ -1,5 +1,12 @@
 # Design Spec: SQLite Vector Memory (sqlite-vec)
 
+> **Historical status: Implemented.**
+>
+> The phase number below is local to the memory-optimization sequence, not the
+> active project roadmap. Current behavior includes lazy optional dependency
+> loading, logged embedding fallback, and semantic RRF integration. See
+> [`docs/BASELINE.md`](../../BASELINE.md).
+
 This document specifies the design for Phase 3 of the memory optimizations: implementing local semantic vector search using the `sqlite-vec` extension.
 
 ## 1. Context & Motivation

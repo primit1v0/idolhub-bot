@@ -1,5 +1,10 @@
 # Memory Integration Implementation Plan
 
+> **Historical status: Implemented.**
+>
+> This plan is retained for provenance. Current behavior and status are defined
+> in [`docs/BASELINE.md`](../../BASELINE.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Integrate EAV facts and preferences schema with FTS5 search into the IdolhubAgent workflow and expose memory management tools to the agent.

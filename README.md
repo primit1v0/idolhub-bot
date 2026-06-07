@@ -1,260 +1,170 @@
 # idolhub
 
-> **Lightweight personal assistant** — PocketFlow · Telegram · REST API · MCP
->
-> Zero bloat. Pure code. Plugin-first.
+Lightweight personal assistant built with PocketFlow, Telegram, FastAPI, and
+MCP. The project favors small dependencies, explicit configuration, and local
+SQLite storage.
 
-[![Private](https://img.shields.io/badge/repo-private-red)](https://github.com/primit1v0/idolhub-bot)
-[![Python](https://img.shields.io/badge/python-3.11+-blue)](https://python.org)
-[![uv](https://img.shields.io/badge/package--manager-uv-purple)](https://docs.astral.sh/uv/)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://python.org)
+[![uv](https://img.shields.io/badge/package%20manager-uv-purple)](https://docs.astral.sh/uv/)
 [![PocketFlow](https://img.shields.io/badge/framework-PocketFlow-orange)](https://github.com/The-Pocket/PocketFlow)
 
----
+## Current Status
 
-## Filosofi
+The current baseline is implemented and covered by 67 tests:
 
-> **Jika ada dua cara untuk menyelesaikan sesuatu, pilih yang lebih ringan.**
+- Telegram bot, REST API, and MCP stdio modes.
+- OpenAI-compatible provider selection.
+- Tool, skill, and plugin extension points.
+- SQLite history, EAV facts/preferences, FTS5 threading, and pruning.
+- Optional sqlite-vec semantic memory.
+- RRF context fusion across facts, FTS5, and semantic results.
+- Prompt-injection filtering, memory-write gating, and bubblewrap sandboxing.
 
-- **Zero bloatware** — setiap dependency harus terjustifikasi, heavy deps masuk `[optional]`
-- **Zero dead code** — tidak ada import, fungsi, atau class yang tidak dipakai
-- **Pure & minimal** — satu fungsi, satu tujuan. Max ~150 baris per file
-- **No `.env` in project** — secrets di-inject via systemd `EnvironmentFile`
+See [Current Baseline](docs/BASELINE.md) for the authoritative feature and
+configuration status.
 
----
+## Configuration Policy
 
-## Features
+`config.example.json` is tracked. `config.json` is local-only and ignored by
+Git.
 
-| | Fitur | Keterangan |
-|---|---|---|
-| 🤖 | **Telegram Bot** | Chat natural, search web, jalankan tools |
-| 🧠 | **Dual Memory (RRF)** | SQLite history (Jaccard deduplicated) + EAV Facts & Preference Store, terintegrasi via Reciprocal Rank Fusion (RRF) |
-| 🛡️ | **Gating & Security** | Prompt Injection Filter (RAG Filter) + Memory Gating (Safe Writes) untuk keamanan memori |
-| 🔌 | **Plugin-First** | Skill/tool/plugin di-drop ke folder, auto-loaded tanpa ubah core |
-| 📡 | **REST API** | FastAPI endpoint dengan integrasi dynamic resource heartbeat monitor |
-| 🔁 | **MCP Server** | Compatible dengan Claude Desktop, Cursor, Windsurf |
-| 🔐 | **Secrets Aman** | Tidak pernah ada di folder project — inject via systemd |
-| ⚡ | **LLM Providers** | OpenAI-compatible, Gemini/Gemma, GitHub Codex OAuth, GitHub Copilot CLI |
+```bash
+cp config.example.json config.json
+```
 
----
+Edit local `config.json` to select one provider. Secrets remain outside the
+repository and are supplied through environment variables. Every `$VARIABLE`
+left in local `config.json` must exist in the environment.
 
-## Tech Stack (Audited)
+Never commit:
 
-| Komponen | Library | Ukuran |
-|---|---|---|
-| Framework | `pocketflow` | ~56KB |
-| Telegram | `python-telegram-bot` | ~1MB |
-| LLM | `openai` SDK | ~1MB |
-| HTTP | `httpx` | ~500KB |
-| API | `fastapi` + `uvicorn` | ~500KB |
-| MCP | `mcp` SDK | ~500KB |
-| Memory | `aiosqlite` | ~100KB |
-| Validation | `pydantic` | ~2MB |
-| Skills parser | `pyyaml` | ~200KB |
-| **Total core** | | **~30MB install** |
-
-**Tidak ada**: `chromadb`, `langchain`, `crewai`, atau framework besar lainnya.
-
----
+- `config.json`
+- `.env` or other secret files
+- `data/` databases
+- logs
+- `workspace/` contents
 
 ## Quick Start
 
-### Prerequisites
-
 ```bash
-# Install uv (jika belum ada)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-### Setup
-
-```bash
-# 1. Clone
 git clone https://github.com/primit1v0/idolhub-bot.git
 cd idolhub-bot
 
-# 2. Setup: buat /etc/idolhub/secrets.env + install systemd service
-sudo bash scripts/setup.sh
-
-# 3. Isi secrets (WAJIB — tidak ada .env di project)
-sudo nano /etc/idolhub/secrets.env
-
-# 4. Install dependencies
+cp config.example.json config.json
 uv sync
 
-# 5. Jalankan (development)
-uv run python main.py bot
+export TELEGRAM_BOT_TOKEN="..."
+export GEMINI_API_KEY="..."
 
-# 6. Production via systemd
-sudo systemctl enable --now idolhub
-journalctl -u idolhub -f
+uv run python main.py bot
 ```
 
-### Mode Operasi
+Install the optional vector extension when local semantic memory is enabled:
 
 ```bash
-uv run python main.py bot    # Telegram bot (default)
-uv run python main.py api    # FastAPI REST server (port 8000)
-uv run python main.py mcp    # MCP server (port 8001)
+uv sync --extra vector
 ```
 
----
+Then set `memory.long_term.backend` to `sqlite_vec` in local `config.json`.
+
+## Modes
+
+```bash
+uv run python main.py bot
+uv run python main.py api
+uv run python main.py mcp
+```
+
+CLI mode overrides `app.mode`. MCP currently uses stdio transport; `mcp.port`
+is not used.
 
 ## Project Structure
 
-```
+```text
 idolhub/
-│
-├── main.py                   # Entry point: bot | api | mcp
-├── config.json               # $VAR references only — aman di git
-├── config.example.json       # Template: copy + isi di secrets.env
-├── pyproject.toml            # uv dependencies (audited, no bloat)
-│
-├── core/                     # Engine — stabil, jarang disentuh
-│   ├── bot.py                # Telegram handler
-│   ├── agent.py              # PocketFlow agent flow (RRF context injection)
-│   ├── memory.py             # Memory manager (short + long term)
-│   ├── llm.py                # LLM abstraction layer
-│   ├── config.py             # $VAR resolver (stdlib os.environ)
-│   ├── event_bus.py          # Hook/event lifecycle system
-│   └── rag_filter.py         # Prompt injection filter (regex word boundaries)
-│
-├── providers/                # LLM provider adapters (swap via config)
-│   ├── openai_provider.py    # OpenAI / OpenAI-compatible
-│   ├── codex_provider.py     # GitHub Codex via OAuth
-│   └── copilot_provider.py   # GitHub Copilot via CLI token
-│
-├── skills/                   # OpenClaw/Hermes-compatible (.md)
-├── tools/                    # Tool implementations (.py, auto-discovered)
-│   └── heartbeat.py          # Zero-dependency system resource monitor
-│
-├── plugins/                  # Hooks & plugins (.py, auto-loaded)
-│
+├── main.py
+├── config.example.json
+├── pyproject.toml
+├── core/
+│   ├── agent.py
+│   ├── bot.py
+│   ├── config.py
+│   ├── event_bus.py
+│   ├── llm.py
+│   └── rag_filter.py
 ├── memory/
-│   ├── sqlite_store.py       # SQLite store: conversation history & EAV facts
-│   ├── memory_gate.py        # Memory gating validation (explicit consent)
-│   └── vector_store.py       # Long-term: sqlite-vec [optional, Phase 2]
-│
-├── api/                      # FastAPI REST
-│   └── routes/               # chat · health · config
-│
-├── mcp/                      # MCP protocol server
-├── systemd/                  # Service template
-├── scripts/                  # Setup helpers
-└── dashboard/                # WebUI [Phase 3]
+│   ├── memory_gate.py
+│   └── sqlite_store.py
+├── api/
+│   ├── server.py
+│   └── routes/
+├── mcp_server/
+│   └── server.py
+├── skills/
+│   └── loader.py
+├── plugins/
+│   └── loader.py
+├── tools/
+│   ├── heartbeat.py
+│   ├── registry.py
+│   └── sandbox.py
+├── systemd/
+├── tests/
+├── docs/
+└── dashboard/
 ```
 
----
+## Extension Points
 
-## Configuration
+### Skills
 
-`config.json` hanya berisi referensi `$VAR` — **tidak ada nilai secret**:
+Markdown files in `skills.dir` are discovered automatically. They require YAML
+frontmatter containing `name`, `description`, and optional parameters.
 
-```json
-{
-  "llm": {
-    "provider": "openai",
-    "base_url": "$OPENAI_BASE_URL",
-    "api_key": "$OPENAI_API_KEY",
-    "model": "gpt-4o"
-  }
-}
-```
+### Plugins
 
-Semua `$VAR` di-resolve dari environment yang di-inject systemd:
+Python classes in `plugins.dir` are instantiated automatically. Supported hook
+methods are:
 
-```ini
-# /etc/systemd/system/idolhub.service
-EnvironmentFile=/etc/idolhub/secrets.env   # ← di luar project
-```
+`before_message`, `after_message`, `before_reply`, `after_reply`, `on_error`,
+and `on_tool_call`.
 
-Lihat [`config.example.json`](config.example.json) untuk daftar semua key yang dibutuhkan.
+### Tools
 
----
+Built-in tools are registered explicitly in `tools/registry.py`. Adding a tool
+requires:
 
-## Inject Skill Baru
+1. implementing the function;
+2. adding its OpenAI-compatible schema to `TOOLS_SCHEMA`;
+3. adding the function to `TOOLS_MAPPING`;
+4. adding tests.
 
-Drop file `.md` ke `skills/` — auto-loaded saat startup:
+`tools.dir` is currently schema-only and is not auto-discovered.
 
-```markdown
----
-name: my_skill
-description: Apa yang skill ini lakukan
-parameters:
-  query:
-    type: string
-    description: Input query
-    required: true
----
+## Production Notes
 
-## Instructions
-Langkah-langkah yang harus dilakukan agent...
-```
+Systemd templates under `systemd/` use `@IDOLHUB_*@` placeholders.
+`scripts/setup.sh` renders the bot service with the target user, repository
+directory, and machine-local environment file. Secrets remain outside the
+repository.
 
-Format kompatibel dengan **OpenClaw / Hermes** skill definitions.
+## Documentation
 
----
-
-## Inject Tool Baru
-
-Drop file `.py` ke `tools/` — auto-discovered via registry:
-
-```python
-from tools.registry import tool
-
-@tool(name="my_tool", description="Does something useful")
-def my_tool(query: str) -> str:
-    return f"result: {query}"
-```
-
----
-
-## Inject Plugin / Hook
-
-Drop file `.py` ke `plugins/` — auto-loaded, lifecycle hooks:
-
-```python
-class MyPlugin:
-    def before_message(self, ctx: dict) -> None: ...
-    def after_reply(self, ctx: dict) -> None: ...
-    def on_error(self, ctx: dict) -> None: ...
-```
-
-Hook yang tersedia: `before_message`, `after_message`, `before_reply`, `after_reply`, `on_error`, `on_tool_call`
-
----
-
-## Dependency Rules
-
-Sebelum `uv add X`, jawab semua ini:
-
-1. Apakah bisa pakai **stdlib Python**? (`json`, `re`, `sqlite3`, `asyncio`, ...)
-2. Apakah **`httpx`** atau dep yang sudah ada bisa handle ini?
-3. Berapa **ukuran install** package ini + transitive deps?
-4. Apakah benar-benar dibutuhkan **sekarang**, atau bisa defer ke phase berikutnya?
-
-Jika tidak lulus minimal 2 → jangan tambah.
-
----
+- [Current baseline](docs/BASELINE.md)
+- [Configuration reference](docs/CONFIG.md)
+- [Dependency decisions](docs/DEPENDENCIES.md)
+- [Contributing](docs/CONTRIBUTING.md)
+- [Latest audit](hasilaudit.md)
+- [Historical specs and plans](docs/superpowers/)
 
 ## Roadmap
 
-| Phase | Status | Scope |
-|---|---|---|
-| **Phase 1** | ✅ Completed | Core bot · agent · memory · providers · skill/tool/plugin system |
-| **Phase 2** | ✅ Completed | FastAPI REST · MCP server · SQLite EAV memory (Jaccard, FTS5, RRF) · Heartbeat monitor & Security Gating |
-| **Phase 3** | 📋 Planned | WebUI Dashboard (config + monitoring) |
-| **Phase 4** | 💡 Future | Voice · advanced RAG · sqlite-vec long-term memory |
-
----
-
-## Docs
-
-- [Design Spec](docs/superpowers/specs/2026-06-06-idolhub-design.md)
-- [Contributing](docs/CONTRIBUTING.md)
-- [Dependencies](docs/DEPENDENCIES.md)
-
----
+| Status | Scope |
+|---|---|
+| Implemented | Core runtime, APIs, extension systems, security controls, and memory stack |
+| Deferred | Dashboard WebUI |
+| Not scheduled | Voice, multi-agent orchestration, additional RAG backends |
 
 ## License
 
-Private — All rights reserved
+All rights reserved.

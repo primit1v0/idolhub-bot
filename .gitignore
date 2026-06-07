@@ -1,6 +1,6 @@
 # =============================================================================
 # idolhub — .gitignore
-# Secrets WAJIB di luar project (/etc/idolhub/secrets.env via systemd)
+# Secrets and machine-local state must never be committed.
 # =============================================================================
 
 # --- Python ---
@@ -27,18 +27,29 @@ ENV/
 # --- Secrets & environment ---
 # .env TIDAK BOLEH ada di sini — inject via systemd EnvironmentFile
 .env
+.env.*
 *.env
 secrets.env
 *.secret
 *.pem
 *.key
 *.p12
+*.pfx
+*.jks
+*.keystore
+credentials.json
+credentials.*.json
+secrets.json
+secrets.*.json
 
 # --- Runtime data ---
 data/
 *.db
+*.db-*
 *.sqlite
+*.sqlite-*
 *.sqlite3
+*.sqlite3-*
 chroma/
 *.faiss
 
@@ -47,7 +58,8 @@ logs/
 *.log
 *.log.*
 
-# --- Config override lokal (bukan config.json utama) ---
+# --- Local configuration ---
+config.json
 config.local.json
 config.override.json
 
@@ -77,4 +89,3 @@ htmlcov/
 # --- Custom local tools & runtime directories ---
 .audit-tools/
 workspace/
-

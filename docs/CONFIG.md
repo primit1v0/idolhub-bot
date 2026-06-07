@@ -1,265 +1,185 @@
-# Config Reference — idolhub
+# Configuration Reference
 
-> **`config.json` adalah satu-satunya pintu konfigurasi seluruh sistem idolhub.**
->
-> Tidak ada file konfigurasi lain. Tidak ada ENV yang di-hardcode di code. Tidak ada file persona eksternal.
+`config.example.json` is the tracked template. Runtime reads local
+`config.json`, which is ignored by Git.
 
----
-
-## Prinsip
-
-- **Satu file** — semua konfigurasi ada di `config.json`
-- **Zero duplikat** — credentials LLM hanya di `providers[name]`, bukan juga di `llm`
-- **Zero secrets** — semua `$VAR` di-resolve dari environment (inject via systemd)
-- **Zero file persona** — system prompt ada di `agent.system_prompt`, bukan SOUL.md/AGENTS.md
-
----
-
-## Alur Resolve Config
-
-```
-config.json ($VAR references)
-      ↓
-/etc/idolhub/secrets.env  (injected by systemd EnvironmentFile)
-      ↓
-core/config.py  (load JSON + resolve $VAR dari os.environ)
-      ↓
-Semua modul (core/, providers/, api/, mcp/, dll)
+```bash
+cp config.example.json config.json
 ```
 
----
+## Resolution Rules
 
-## Schema Lengkap
+1. JSON keys beginning with `_` are documentation metadata and are removed.
+2. Every `$VARIABLE` in the remaining JSON is resolved from `os.environ`.
+3. Missing variables fail startup with `KeyError`.
+4. The resolved document is validated by `AppConfig`.
 
-### `app` — Konfigurasi Aplikasi
+Resolution is recursive and does not skip inactive providers. Keep only
+configured provider blocks in local `config.json`, or define every referenced
+variable.
 
-| Key | Type | Default | Keterangan |
-|---|---|---|---|
-| `app.name` | string | `"idolhub"` | Nama aplikasi (dipakai di logging) |
-| `app.mode` | string | `"bot"` | Mode startup: `bot` \| `api` \| `mcp` |
-| `app.debug` | bool | `false` | Aktifkan debug logging |
-| `app.timezone` | string | `"Asia/Jakarta"` | Timezone untuk timestamp |
+## Secrets
 
----
+No dotenv loader is used. Export variables in the shell or inject them with a
+service manager:
 
-### `agent` — Konfigurasi Agent PocketFlow
+```bash
+export TELEGRAM_BOT_TOKEN="..."
+export GEMINI_API_KEY="..."
+```
 
-| Key | Type | Default | Keterangan |
-|---|---|---|---|
-| `agent.system_prompt` | string | *(lihat contoh)* | System prompt yang diinjeksi ke setiap LLM call |
-| `agent.max_iterations` | int | `10` | Batas loop agent (cegah infinite loop) |
-| `agent.tools_enabled` | bool | `true` | Aktifkan tool calling |
-| `agent.memory_enabled` | bool | `true` | Aktifkan memory retrieval |
+Environment files must remain outside the repository.
 
-> **Catatan**: `agent.system_prompt` adalah satu-satunya tempat persona/instruksi agent.
-> Tidak ada SOUL.md, AGENTS.md, atau file persona eksternal.
+## Schema
 
----
+### `app`
 
-### `telegram` — Konfigurasi Bot Telegram
+| Key | Default | Runtime status |
+|---|---:|---|
+| `name` | `idolhub` | Used for MCP server name |
+| `mode` | `bot` | Used when CLI mode is omitted |
+| `debug` | `false` | Accepted, not currently enforced |
+| `timezone` | `Asia/Jakarta` | Accepted, not currently enforced |
 
-| Key | Type | Default | Keterangan |
-|---|---|---|---|
-| `telegram.token` | string | `"$TELEGRAM_BOT_TOKEN"` | Bot token dari @BotFather |
-| `telegram.allowed_users` | int[] | `[]` | Whitelist user ID. Kosong = semua boleh |
-| `telegram.parse_mode` | string | `"Markdown"` | Format pesan: `Markdown` \| `MarkdownV2` \| `HTML` |
+### `agent`
 
----
+| Key | Default | Runtime status |
+|---|---:|---|
+| `system_prompt` | required | Injected into every LLM request |
+| `max_iterations` | `10` | Enforced |
+| `tools_enabled` | `true` | Enforced |
+| `memory_enabled` | `true` | Accepted, not currently enforced |
+| `filter_enabled` | `true` | Enforced |
+| `gating_enabled` | `true` | Enforced |
 
-### `llm` — Parameter LLM (bukan credentials)
+### `telegram`
 
-| Key | Type | Default | Keterangan |
-|---|---|---|---|
-| `llm.provider` | string | `"openai"` | Provider aktif: `openai` \| `openai_codex` \| `github_copilot` |
-| `llm.model` | string | `"gpt-4o"` | Nama model yang dipakai |
-| `llm.temperature` | float | `0.7` | Kreativitas output (0.0 = deterministik) |
-| `llm.max_tokens` | int | `4096` | Batas token per response |
-| `llm.timeout` | int | `30` | Timeout HTTP request (detik) |
+| Key | Default | Runtime status |
+|---|---:|---|
+| `token` | required | Enforced |
+| `allowed_users` | `[]` | Enforced; empty allows all users |
+| `parse_mode` | `Markdown` | Enforced |
 
-> **Penting**: Credentials (api_key, base_url, token) ada di `providers`, **bukan** di sini.
-> `llm.provider` adalah selector — sistem akan baca `providers[llm.provider]` untuk credentials.
+### `llm`
 
----
+| Key | Default | Runtime status |
+|---|---:|---|
+| `provider` | `openai` | Selects `providers[provider]` |
+| `model` | `gpt-4o` | Enforced |
+| `temperature` | `0.7` | Enforced |
+| `max_tokens` | `4096` | Enforced |
+| `timeout` | `30` | Enforced |
 
-### `providers` — Credentials Per Provider
+Supported credential layouts:
 
-Hanya provider yang dipilih di `llm.provider` yang aktif. Sisanya diabaikan.
+| Provider | Credential field |
+|---|---|
+| `gemini` or other generic OpenAI-compatible provider | `api_key` |
+| `openai` | `api_key` |
+| `openai_codex` | `oauth_token` |
+| `github_copilot` | `cli_token` |
 
-#### `providers.openai`
+Each provider requires `base_url`.
 
-| Key | Type | Keterangan |
+### `memory.short_term`
+
+| Key | Default | Runtime status |
+|---|---:|---|
+| `backend` | `sqlite` | Only supported value |
+| `path` | `./data/memory.db` | Enforced |
+| `max_messages` | `50` | Active context limit |
+| `fts_context_window` | `2` | Adjacent messages around FTS matches |
+| `auto_prune_enabled` | `true` | Enforced |
+| `auto_prune_limit` | `1000` | Per-user stored-message limit |
+
+### `memory.long_term`
+
+| Key | Default | Runtime status |
+|---|---:|---|
+| `backend` | `none` | `none` or `sqlite_vec` |
+| `path` | `./data/vectors.db` | Enforced for sqlite-vec |
+| `embedding_model` | `text-embedding-3-small` | Enforced |
+
+For sqlite-vec:
+
+```bash
+uv sync --extra vector
+```
+
+If the extra is missing, startup fails before opening database connections.
+Embedding failures do not interrupt short-term message storage and are logged.
+
+### Extension Systems
+
+| Section | Active keys | Accepted but not enforced |
 |---|---|---|
-| `base_url` | string | Endpoint API. Bisa custom untuk Ollama, LM Studio, dll |
-| `api_key` | string | API key (`$OPENAI_API_KEY`) |
+| `skills` | `dir`, `enabled` | none |
+| `tools` | `enabled` | `dir` |
+| `plugins` | `dir` | `enabled` |
 
-#### `providers.openai_codex`
+An empty `skills.enabled` or `tools.enabled` list enables all registered
+entries.
 
-| Key | Type | Keterangan |
-|---|---|---|
-| `base_url` | string | `https://api.openai.com/v1` |
-| `oauth_token` | string | OpenAI Codex OAuth token (`$OPENAI_CODEX_TOKEN`) |
+### `api`
 
-#### `providers.github_copilot`
+| Key | Runtime status |
+|---|---|
+| `host`, `port`, `cors_origins` | Enforced |
+| `enabled` | Accepted, not currently enforced |
 
-| Key | Type | Keterangan |
-|---|---|---|
-| `base_url` | string | `https://api.githubcopilot.com` |
-| `cli_token` | string | Token dari `gh auth token` atau OAuth (`$GITHUB_COPILOT_TOKEN`) |
+### `mcp`
 
----
+`enabled` and `port` are accepted but not currently enforced. MCP starts only
+when mode `mcp` is selected and uses stdio transport.
 
-### `memory` — Konfigurasi Memory
+### `logging`
 
-#### `memory.short_term`
+`level` and `format` are used by `main.py`. Supported formats are `text` and
+the built-in simplified JSON format.
 
-| Key | Type | Default | Keterangan |
-|---|---|---|---|
-| `backend` | string | `"sqlite"` | Backend: `sqlite` |
-| `path` | string | `"./data/memory.db"` | Path file SQLite |
-| `max_messages` | int | `50` | Max pesan yang dimuat untuk konteks aktif percakapan |
-| `fts_context_window` | int | `2` | Jumlah pesan sebelum/sesudah pesan FTS5 yang ikut diambil sebagai utas konteks |
-| `auto_prune_enabled` | bool | `true` | Mengaktifkan pembersihan otomatis (auto-pruning) untuk histori lama |
-| `auto_prune_limit` | int | `1000` | Batas maksimum jumlah pesan yang disimpan di DB sebelum dipotong |
+## Provider Examples
 
-#### `memory.long_term`
+Keep one configured provider block unless all referenced environment variables
+are available.
 
-| Key | Type | Default | Keterangan |
-|---|---|---|---|
-| `backend` | string | `"none"` | Backend: `none` \| `sqlite_vec` *(Phase 2)* |
-| `path` | string | `"./data/vectors.db"` | Path file vector DB |
-| `embedding_model` | string | `"text-embedding-3-small"` | Model embedding OpenAI-compatible untuk semantic search |
-
-> **Phase 1**: `long_term.backend = "none"` — tidak ada vector memory.
-> **Phase 2**: Ganti ke `"sqlite_vec"` + `uv sync --extra vector`. Vector memory menggunakan ekstensi SQLite `sqlite-vec` yang ringan untuk pemrosesan semantik lokal di dalam file database yang sama atau terpisah.
-
----
-
-### `skills` — Skill System
-
-| Key | Type | Default | Keterangan |
-|---|---|---|---|
-| `skills.dir` | string | `"./skills"` | Folder skill definitions (`.md` files) |
-| `skills.enabled` | string[] | `[]` | Kosong = semua aktif. Isi untuk whitelist |
-
----
-
-### `tools` — Tool Registry
-
-| Key | Type | Default | Keterangan |
-|---|---|---|---|
-| `tools.dir` | string | `"./tools"` | Folder tool implementations (`.py` files) |
-| `tools.enabled` | string[] | `[]` | Kosong = semua aktif. Isi untuk whitelist |
-
----
-
-### `plugins` — Plugin/Hook System
-
-| Key | Type | Default | Keterangan |
-|---|---|---|---|
-| `plugins.dir` | string | `"./plugins"` | Folder plugin files (`.py` files) |
-| `plugins.enabled` | string[] | `[]` | Kosong = semua aktif. Isi untuk whitelist |
-
----
-
-### `api` — FastAPI REST Server
-
-| Key | Type | Default | Keterangan |
-|---|---|---|---|
-| `api.enabled` | bool | `true` | Aktifkan REST API |
-| `api.host` | string | `"127.0.0.1"` | Bind host |
-| `api.port` | int | `8000` | Port |
-| `api.cors_origins` | string[] | `[]` | Allowed origins. Kosong = tidak ada CORS |
-
----
-
-### `mcp` — MCP Protocol Server
-
-| Key | Type | Default | Keterangan |
-|---|---|---|---|
-| `mcp.enabled` | bool | `true` | Aktifkan MCP server |
-| `mcp.port` | int | `8001` | Port MCP server |
-
----
-
-### `logging` — Logging
-
-| Key | Type | Default | Keterangan |
-|---|---|---|---|
-| `logging.level` | string | `"INFO"` | Level: `DEBUG` \| `INFO` \| `WARNING` \| `ERROR` |
-| `logging.format` | string | `"text"` | Format: `text` \| `json` |
-
-> Output ke stdout — ditangkap `journald` saat production via systemd.
-
----
-
-## Contoh Konfigurasi
-
-### Ganti provider ke Ollama (local)
+### OpenAI
 
 ```json
 {
-  "llm": {
-    "provider": "openai",
-    "model": "llama3.2"
-  },
+  "llm": {"provider": "openai", "model": "gpt-4o"},
+  "providers": {
+    "openai": {
+      "base_url": "https://api.openai.com/v1",
+      "api_key": "$OPENAI_API_KEY"
+    }
+  }
+}
+```
+
+### OpenAI-compatible local endpoint
+
+```json
+{
+  "llm": {"provider": "openai", "model": "llama3.2"},
   "providers": {
     "openai": {
       "base_url": "http://localhost:11434/v1",
-      "api_key": "ollama"
+      "api_key": "local"
     }
   }
 }
 ```
 
-### Aktifkan whitelist user Telegram
+### OpenAI Codex credential layout
 
 ```json
 {
-  "telegram": {
-    "allowed_users": [123456789, 987654321]
-  }
-}
-```
-
-### Aktifkan long-term memory (Phase 2)
-
-```json
-{
-  "memory": {
-    "long_term": {
-      "backend": "sqlite_vec",
-      "path": "./data/vectors.db"
+  "llm": {"provider": "openai_codex", "model": "gpt-4"},
+  "providers": {
+    "openai_codex": {
+      "base_url": "https://api.openai.com/v1",
+      "oauth_token": "$OPENAI_CODEX_TOKEN"
     }
   }
 }
 ```
-
-### Hanya aktifkan skill tertentu
-
-```json
-{
-  "skills": {
-    "enabled": ["web_search", "summarize"]
-  }
-}
-```
-
----
-
-## Cara `core/config.py` Bekerja
-
-```python
-# Pseudocode — implementasi ada di core/config.py
-import json, os, re
-
-def resolve_env(value):
-    """Resolve $VAR_NAME dari os.environ"""
-    return re.sub(r'\$([A-Z_][A-Z0-9_]*)',
-                  lambda m: os.environ[m.group(1)], str(value))
-
-# Load config.json
-# Resolve semua $VAR secara rekursif
-# Return typed Config object (Pydantic model)
-```
-
-Tidak ada `load_dotenv()`. Tidak ada `.env` file. Murni dari environment yang sudah di-inject systemd.

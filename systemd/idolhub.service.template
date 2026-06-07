@@ -5,13 +5,15 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/idolhub
+User=@IDOLHUB_USER@
+Group=@IDOLHUB_GROUP@
+WorkingDirectory=@IDOLHUB_DIR@
 
-# Secrets di-inject dari ~/.config/idolhub/.env (mirip nanobot)
-EnvironmentFile=/etc/idolhub/idolhub.env
+# Rendered by scripts/setup.sh; the final path remains machine-local.
+EnvironmentFile=@IDOLHUB_ENV_FILE@
 
 # Gunakan venv dari uv
-ExecStart=/opt/idolhub/.venv/bin/python main.py
+ExecStart=@IDOLHUB_DIR@/.venv/bin/python main.py
 
 # Restart policy
 Restart=on-failure

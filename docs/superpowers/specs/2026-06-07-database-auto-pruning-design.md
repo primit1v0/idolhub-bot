@@ -1,5 +1,11 @@
 # Design Spec: Database Auto-Pruning
 
+> **Historical status: Implemented.**
+>
+> The phase number below is local to the memory-optimization sequence, not the
+> active project roadmap. Current status is defined in
+> [`docs/BASELINE.md`](../../BASELINE.md).
+
 This document describes the design for Phase 2 of the memory optimizations: **Database Auto-Pruning**.
 
 ## 1. Problem Statement

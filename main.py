@@ -27,7 +27,7 @@ def main():
         cfg = load_config("config.json")
     except KeyError as e:
         print(f"CRITICAL ERROR: Secret untuk {e} tidak ditemukan di environment!")
-        print("Pastikan /etc/idolhub/idolhub.env sudah diisi dan di-export.")
+        print("Pastikan environment atau EnvironmentFile lokal sudah diisi.")
         sys.exit(1)
     except Exception as e:
         print(f"CRITICAL ERROR: Gagal memuat config: {e}")

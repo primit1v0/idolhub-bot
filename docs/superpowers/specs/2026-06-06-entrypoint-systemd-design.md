@@ -1,5 +1,12 @@
 # idolhub — Main Entrypoint & Systemd Service Integration Spec
 
+> **Historical status: Implemented with later configuration-policy changes.**
+>
+> Current behavior and status are defined in
+> [`docs/BASELINE.md`](../../BASELINE.md). References that treat `config.json`
+> as a tracked repository file are obsolete: it is now local-only and ignored.
+> Any phase numbering is local to this historical work item.
+
 **Date:** 2026-06-06  
 **Status:** Approved ✅
 
@@ -95,10 +102,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=sandi
-WorkingDirectory=/opt/idolhub
-EnvironmentFile=/etc/idolhub/idolhub.env
-ExecStart=/opt/idolhub/.venv/bin/python main.py api
+User=@IDOLHUB_USER@
+WorkingDirectory=@IDOLHUB_DIR@
+EnvironmentFile=@IDOLHUB_ENV_FILE@
+ExecStart=@IDOLHUB_DIR@/.venv/bin/python main.py api
 Restart=on-failure
 RestartSec=5
 StartLimitInterval=60
@@ -121,10 +128,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=sandi
-WorkingDirectory=/opt/idolhub
-EnvironmentFile=/etc/idolhub/idolhub.env
-ExecStart=/opt/idolhub/.venv/bin/python main.py mcp
+User=@IDOLHUB_USER@
+WorkingDirectory=@IDOLHUB_DIR@
+EnvironmentFile=@IDOLHUB_ENV_FILE@
+ExecStart=@IDOLHUB_DIR@/.venv/bin/python main.py mcp
 Restart=on-failure
 RestartSec=5
 StartLimitInterval=60

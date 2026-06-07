@@ -1,106 +1,61 @@
-# Dependency Decisions — idolhub
+# Dependency Decisions
 
-> Setiap dependency harus terjustifikasi. Dokumen ini adalah catatan keputusan.
+The authoritative dependency declarations are `pyproject.toml` and `uv.lock`.
 
----
+## Core
 
-## Core Dependencies (Phase 1)
-
-### `pocketflow`
-- **Alasan**: Core framework, 100 baris, zero external dependencies
-- **Alternatif yang ditolak**: LangChain (+166MB), CrewAI (+173MB), LangGraph (+51MB)
-
-### `python-telegram-bot`
-- **Alasan**: Async handler Telegram yang stabil, widely used, maintained
-- **Alternatif yang dipertimbangkan**: `aiogram` (lebih ringan tapi less stable), raw `httpx` calls (lebih banyak boilerplate)
-- **Catatan**: Gunakan tanpa extras `[all]`
-
-### `openai`
-- **Alasan**: OpenAI-compatible SDK — support custom `base_url` untuk semua provider
-- **Alternatif**: `httpx` langsung — bisa, tapi SDK handle retry, streaming, error parsing
-- **Catatan**: Satu SDK untuk OpenAI, Codex, Copilot, Ollama, LM Studio
-
-### `httpx`
-- **Alasan**: Async HTTP client modern, dipakai oleh openai + python-telegram-bot sebagai transitive dep
-- **Alternatif yang ditolak**: `requests` (sync only), `aiohttp` (sudah punya httpx)
-
-### `fastapi`
-- **Alasan**: Lightweight, type-safe, auto-docs, minimal overhead
-- **Alternatif yang ditolak**: Flask (sync), Django (overkill), Starlette (terlalu low-level)
-
-### `uvicorn`
-- **Alasan**: ASGI server minimal untuk FastAPI
-- **Catatan**: Plain `uvicorn`, bukan `uvicorn[standard]` — tidak butuh websockets/httptools/watchfiles
-
-### `mcp`
-- **Alasan**: Official MCP SDK — required untuk MCP protocol compliance
-- **Catatan**: Pulls `pydantic-settings` sebagai transitive dep (kita tidak import langsung)
-
-### `aiosqlite`
-- **Alasan**: Async wrapper SQLite untuk short-term memory
-- **Ukuran**: ~100KB, zero C++ deps
-- **Alternatif yang ditolak**: `databases` (overkill), raw `sqlite3` (sync only)
-
-### `pydantic`
-- **Alasan**: Type validation untuk config dan data models
-- **Catatan**: Dipakai juga oleh fastapi dan mcp sebagai transitive dep
-
-### `pyyaml`
-- **Alasan**: Parse YAML frontmatter di skill definitions (`.md` files)
-- **Alternatif**: `python-frontmatter` (adds another dep), manual regex (error-prone)
-
----
-
-## Optional Dependencies
-
-### `sqlite-vec` *(extras: vector)*
-- **Alasan**: SQLite extension untuk vector similarity search — ringan vs chromadb
-- **Kapan diinstall**: Phase 2, saat long-term memory diaktifkan
-- **Alternatif yang ditolak**: `chromadb` (200MB+, C++ deps, onnxruntime), `faiss-cpu` (C++ heavy)
-- **Install**: `uv sync --extra vector`
-
-### `duckduckgo-search` *(extras: search)*
-- **Alasan**: Web search tool untuk agent
-- **Catatan**: Bisa diganti dengan `httpx` langsung ke DDG Lite JSON endpoint
-- **Install**: `uv sync --extra search`
-
----
-
-## Dependencies yang Ditolak
-
-| Package | Ukuran | Alasan Ditolak |
+| Package | Purpose | Decision |
 |---|---|---|
-| `chromadb` | ~200MB+ | C++ deps, onnxruntime, numpy — jauh lebih berat dari `sqlite-vec` |
-| `pydantic-settings` | ~1MB | Overkill — kita pakai `os.environ` + custom `$VAR` resolver |
-| `uvicorn[standard]` | +extras | Tambah websockets, httptools, watchfiles yang tidak diperlukan |
-| `langchain` | ~100MB+ | Framework alternatif — tidak dipakai, sudah ada PocketFlow |
-| `crewai` | ~173MB | Framework alternatif — tidak dipakai |
-| `requests` | ~300KB | Sync-only, sudah ada `httpx` |
-| `aiohttp` | ~2MB | Redundant dengan `httpx` |
-| `python-dotenv` | ~50KB | Kita tidak pakai `.env` file di project |
+| `pocketflow` | Async agent graph | Small framework aligned with project architecture |
+| `python-telegram-bot` | Telegram transport | Maintained async client |
+| `openai` | OpenAI-compatible chat and embeddings | One client for configured compatible endpoints |
+| `httpx` | HTTP requests and web-search tool | Existing async-capable client |
+| `fastapi` | REST API | Typed ASGI API |
+| `uvicorn` | ASGI server | Installed without heavy optional extras |
+| `mcp` | MCP protocol | Official SDK |
+| `aiosqlite` | Async SQLite access | Lightweight persistence |
+| `pydantic` | Configuration validation | Shared with API stack |
+| `pyyaml` | Skill frontmatter | Avoids ad hoc YAML parsing |
 
----
+## Optional Extras
 
-## Transitive Dependencies Penting
+### `vector`
 
-Dependencies berikut tidak kita tambah langsung tapi terinstall karena dibutuhkan dep lain:
+Installs `sqlite-vec`. It is required only when
+`memory.long_term.backend = "sqlite_vec"`.
 
-| Package | Ditarik oleh | Catatan |
-|---|---|---|
-| `pydantic-settings` | `mcp` | Tidak kita import langsung |
-| `python-dotenv` | `pydantic-settings` via `mcp` | Tidak kita import langsung |
-| `starlette` | `fastapi`, `mcp` | FastAPI foundation |
-| `anyio` | `httpx`, `mcp`, `openai` | Async primitives |
-| `cryptography` | `pyjwt` via `mcp` | JWT support |
+```bash
+uv sync --extra vector
+```
 
----
+The module is lazy-loaded. Core and short-term memory remain importable without
+the extra.
 
-## Aturan Review Dependency
+### `search`
 
-Sebelum merge PR yang menambah dependency:
+Installs `duckduckgo-search`, but the current built-in `search_web` tool uses
+`httpx` directly and does not require this extra. Keep the extra only for
+experimentation or a future approved implementation.
 
-- [ ] Justifikasi ada di dokumen ini
-- [ ] Ukuran install terdokumentasi
-- [ ] Alternatif yang lebih ringan sudah dipertimbangkan
-- [ ] Jika heavy (>10MB): masuk ke `[optional-dependencies]`
-- [ ] Tidak ada dependency duplikat dengan yang sudah ada
+## Development
+
+The `dev` extra installs pytest, pytest-asyncio, and Ruff.
+
+## Rejected Heavy Alternatives
+
+| Package | Reason |
+|---|---|
+| `chromadb` | Large dependency graph for a use case handled by sqlite-vec |
+| `faiss-cpu` | Native-heavy dependency unnecessary for local personal memory |
+| `langchain` | Overlaps PocketFlow and local orchestration |
+| `crewai` | Overlaps current agent architecture |
+| `uvicorn[standard]` | Adds components not required by the current server |
+| `python-dotenv` as direct dependency | Runtime uses process environment directly |
+
+## Review Checklist
+
+- Justification is documented here.
+- `pyproject.toml` and `uv.lock` agree.
+- Optional functionality is isolated behind an extra.
+- No existing dependency already covers the requirement.
+- Full tests and pip-audit pass.

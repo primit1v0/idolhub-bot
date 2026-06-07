@@ -1,5 +1,11 @@
 # idolhub — Async PocketFlow Agent Flow Design Spec
 
+> **Historical status: Implemented.**
+>
+> This document records the original design. Current behavior and status are
+> defined in [`docs/BASELINE.md`](../../BASELINE.md). Any phase numbering is
+> local to this historical work item.
+
 **Date:** 2026-06-06  
 **Status:** Approved ✅
 
@@ -15,7 +21,7 @@ Langkah ini juga mengintegrasikan Event Bus (lifecycle hooks) dan Skill Loader u
 
 ## 2. PocketFlow Async Graph & Declarative Transitions
 
-Kita akan mengubah implementasi agent di [core/agent.py](file:///opt/idolhub/core/agent.py) dari iterasi `while` imperatif menjadi graf asinkron deklaratif menggunakan operator transisi PocketFlow:
+Kita akan mengubah implementasi agent di [`core/agent.py`](../../../core/agent.py) dari iterasi `while` imperatif menjadi graf asinkron deklaratif menggunakan operator transisi PocketFlow:
 
 - **AnswerNode** (`AsyncNode`): Memanggil LLM secara asinkron. Mengembalikan aksi `"done"` jika berhasil membalas dengan teks, atau `"tool_call"` jika memerlukan pemanggilan tool.
 - **ToolExecutionNode** (`AsyncNode`): Mengeksekusi tool-tool yang dipanggil secara sekuensial, menginjeksi hasilnya ke riwayat pesan, dan loop kembali ke `AnswerNode`.
@@ -40,7 +46,7 @@ self.flow = AsyncFlow(start=self.answer_node)
 
 ## 3. Asynchronous LLM Client
 
-Kita akan mengubah berkas [core/llm.py](file:///opt/idolhub/core/llm.py) agar menggunakan `AsyncOpenAI` dari pustaka `openai` SDK:
+Kita akan mengubah berkas [`core/llm.py`](../../../core/llm.py) agar menggunakan `AsyncOpenAI` dari pustaka `openai` SDK:
 
 - Fungsi `call_llm` diubah menjadi asinkron (`async def call_llm`).
 - Panggilan API chat completions diubah menggunakan `await client.chat.completions.create(...)`.
@@ -50,7 +56,7 @@ Kita akan mengubah berkas [core/llm.py](file:///opt/idolhub/core/llm.py) agar me
 
 ## 4. Hook Lifecycle & Event Bus (Plugins)
 
-Menambahkan berkas [core/event_bus.py](file:///opt/idolhub/core/event_bus.py) untuk menyebarkan event asinkron ke plugin. 
+Menambahkan berkas [`core/event_bus.py`](../../../core/event_bus.py) untuk menyebarkan event asinkron ke plugin.
 
 ### 4.1 Daftar Event & Trigger Point
 1. `before_message`: Di awal `agent.run`.
@@ -60,13 +66,13 @@ Menambahkan berkas [core/event_bus.py](file:///opt/idolhub/core/event_bus.py) un
 5. `after_reply`: Setelah respons disimpan ke memory.
 6. `on_error`: Jika terjadi error di graf atau agent.
 
-Pemuat plugin di [plugins/loader.py](file:///opt/idolhub/plugins/loader.py) memuat berkas `.py` dari direktori `plugins/` secara dinamis menggunakan `importlib` dan meregistrasikan fungsi yang memiliki nama yang sama dengan event ke Event Bus.
+Pemuat plugin di [`plugins/loader.py`](../../../plugins/loader.py) memuat berkas `.py` dari direktori `plugins/` secara dinamis menggunakan `importlib` dan meregistrasikan fungsi yang memiliki nama yang sama dengan event ke Event Bus.
 
 ---
 
 ## 5. Skill Loader (Hermes/OpenClaw-Compatible)
 
-Menambahkan berkas [skills/loader.py](file:///opt/idolhub/skills/loader.py) untuk memuat berkas `.md` dengan YAML frontmatter dari folder `skills/`:
+Menambahkan berkas [`skills/loader.py`](../../../skills/loader.py) untuk memuat berkas `.md` dengan YAML frontmatter dari folder `skills/`:
 - Memparse frontmatter YAML dengan `pyyaml`.
 - Membuat skema OpenAI Tool secara otomatis.
 - Membuat fungsi *runner* dinamis yang memicu LLM call terisolasi dengan instruksi markdown skill sebagai system prompt sementara.
@@ -75,6 +81,6 @@ Menambahkan berkas [skills/loader.py](file:///opt/idolhub/skills/loader.py) untu
 
 ## 6. Verification Plan
 
-1. Buat unit test baru di [tests/test_skills_plugins.py](file:///opt/idolhub/tests/test_skills_plugins.py) untuk memverifikasi event bus, pemuatan plugin dinamis, dan pemuatan skill markdown.
-2. Perbarui [tests/test_agent.py](file:///opt/idolhub/tests/test_agent.py) untuk menggunakan `async def mock_call_llm`.
+1. Buat unit test baru di [`tests/test_skills_plugins.py`](../../../tests/test_skills_plugins.py) untuk memverifikasi event bus, pemuatan plugin dinamis, dan pemuatan skill markdown.
+2. Perbarui [`tests/test_agent.py`](../../../tests/test_agent.py) untuk menggunakan `async def mock_call_llm`.
 3. Jalankan seluruh unit test suite dengan `uv run pytest` untuk memastikan status kelulusan 100%.

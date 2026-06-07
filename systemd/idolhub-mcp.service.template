@@ -5,10 +5,11 @@ After=network.target
 
 [Service]
 Type=simple
-User=sandi
-WorkingDirectory=/opt/idolhub
-EnvironmentFile=/etc/idolhub/idolhub.env
-ExecStart=/opt/idolhub/.venv/bin/python main.py mcp
+User=@IDOLHUB_USER@
+Group=@IDOLHUB_GROUP@
+WorkingDirectory=@IDOLHUB_DIR@
+EnvironmentFile=@IDOLHUB_ENV_FILE@
+ExecStart=@IDOLHUB_DIR@/.venv/bin/python main.py mcp
 Restart=on-failure
 RestartSec=5
 StartLimitInterval=60

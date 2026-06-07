@@ -1,5 +1,11 @@
 # mrktt Memory Additions Implementation Plan
 
+> **Historical status: Implemented.**
+>
+> This plan is retained for provenance. Checkbox and service-handoff notes are
+> historical, not current operational status. See
+> [`docs/BASELINE.md`](../../BASELINE.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implement the remaining memory optimizations inspired by `mrktt`: SQLite FTS5 search indexing, Jaccard similarity deduplication, and multi-factor facts scoring.

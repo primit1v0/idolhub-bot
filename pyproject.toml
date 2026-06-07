@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Phase 2: vector memory (optional, heavy — install only when needed)
+# Optional semantic memory extension
 vector = [
     "sqlite-vec>=0.1.0",
 ]

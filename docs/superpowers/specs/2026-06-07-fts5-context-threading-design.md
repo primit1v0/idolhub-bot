@@ -1,5 +1,12 @@
 # Design Spec: FTS5 Context Threading
 
+> **Historical status: Implemented.**
+>
+> The phase number below is local to the memory-optimization sequence. Current
+> status is defined in [`docs/BASELINE.md`](../../BASELINE.md). References to a
+> repository-tracked `config.json` are obsolete; runtime configuration is
+> local-only.
+
 This document describes the design for Phase 1 of the memory optimizations: **FTS5 Context Threading**.
 
 ## 1. Problem Statement

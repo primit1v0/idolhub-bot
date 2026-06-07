@@ -37,7 +37,7 @@ def wrap_bwrap(command: str, workspace: str, cwd: str) -> list[str]:
     for p in optional:
         args += ["--ro-bind-try", p, p]
 
-    # Kita timpa parent dir (misal: /opt) dengan tmpfs kosong
+    # Timpa parent workspace (misalnya /home/user/projects) dengan tmpfs kosong
     # Supaya idolhub config dan source code tidak terlihat
     parent_dir = str(ws.parent)
 
@@ -53,4 +53,3 @@ def wrap_bwrap(command: str, workspace: str, cwd: str) -> list[str]:
     ]
 
     return args
-

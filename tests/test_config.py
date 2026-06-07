@@ -1,3 +1,6 @@
+import json
+import tempfile
+
 import pytest
 
 from core.config import AppConfig, load_config, resolve_env
@@ -50,10 +53,6 @@ def test_load_config_resolves_nested_dict(monkeypatch, tmp_path):
 
 
 def test_long_term_config_embedding_model():
-    from core.config import load_config
-    import tempfile
-    import json
-    
     data = {
         "app": {"name": "test", "mode": "bot"},
         "telegram": {"token": "test"},
@@ -77,4 +76,3 @@ def test_long_term_config_embedding_model():
         
     cfg = load_config(f.name)
     assert cfg.memory.long_term.embedding_model == "text-embedding-3-small"
-

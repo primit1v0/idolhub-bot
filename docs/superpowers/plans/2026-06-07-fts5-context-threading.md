@@ -1,5 +1,11 @@
 # FTS5 Context Threading Implementation Plan
 
+> **Historical status: Implemented.**
+>
+> Unchecked boxes are stale plan metadata. References to tracked `config.json`
+> are obsolete. Current status is defined in
+> [`docs/BASELINE.md`](../../BASELINE.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implement FTS5 Context Threading to retrieve search matches along with their adjacent conversation messages formatted as a thread.

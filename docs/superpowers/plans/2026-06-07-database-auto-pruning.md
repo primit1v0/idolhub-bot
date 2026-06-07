@@ -1,5 +1,11 @@
 # Database Auto-Pruning Implementation Plan
 
+> **Historical status: Implemented.**
+>
+> Unchecked boxes are stale plan metadata, not incomplete runtime work. The
+> phase number is local to memory optimization. See
+> [`docs/BASELINE.md`](../../BASELINE.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implement automatic pruning of short-term memory messages per user based on configured limit.

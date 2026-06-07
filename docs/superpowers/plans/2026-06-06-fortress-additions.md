@@ -1,5 +1,12 @@
 # Fortress additions (Heartbeat, Gating, Filter, RRF) Implementation Plan
 
+> **Historical status: Implemented.**
+>
+> Checkbox state is not authoritative because implementation continued outside
+> this file. Current behavior is defined in
+> [`docs/BASELINE.md`](../../BASELINE.md). Any phase numbering is local to this
+> historical plan.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implement Heartbeat monitor, REST health integration, Memory Gating, Prompt Injection Input Filter, and Mini-RRF Fusion Merger.

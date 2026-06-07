@@ -1,81 +1,77 @@
-# Contributing to idolhub
+# Contributing
 
-> Baca filosofi di README.md terlebih dahulu sebelum berkontribusi.
+Read [Current Baseline](BASELINE.md) before changing behavior.
 
----
+## Repository Rules
 
-## Prinsip Utama
+- `config.example.json` is the only tracked configuration template.
+- Never commit `config.json`, secrets, databases, logs, or workspace output.
+- Do not reintroduce global phase numbering into active docs.
+- Historical specs and plans must retain their status banners.
+- Use existing PocketFlow, loader, and registry patterns.
+- Avoid new dependencies when stdlib or an existing dependency is sufficient.
 
-### Zero Bloatware
-- Setiap dependency wajib punya justifikasi di komentar `pyproject.toml`
-- Heavy deps (ML libs, vector DB, dll) masuk `[optional-dependencies]`
-- Gunakan `uv add X` bukan `pip install X`
-
-### Zero Dead Code
-- Tidak ada fungsi/class/import yang tidak dipakai
-- Tidak ada commented-out code yang di-commit
-- Tidak ada `TODO` tanpa issue reference
-
-### Pure & Minimal Code
-- Satu fungsi → satu tujuan
-- Panjang file maksimal ~150 baris — pecah jika lebih
-- Type hints wajib di semua public API
-- Docstring hanya jika nama + type hints tidak cukup jelas
-
----
-
-## Menambah Dependency Baru
-
-Jawab semua pertanyaan ini sebelum `uv add X`:
-
-1. Apakah bisa pakai stdlib Python? (`json`, `re`, `sqlite3`, `asyncio`, ...)
-2. Apakah `httpx` atau dep yang sudah ada bisa handle ini?
-3. Berapa ukuran install package + transitive deps? (`pip show X` / PyPI)
-4. Apakah benar-benar dibutuhkan sekarang, atau bisa defer ke phase berikutnya?
-
-**Jika tidak lulus minimal 2 pertanyaan → jangan tambah.**
-
----
-
-## Workflow
+## Setup
 
 ```bash
-# Setup
-uv sync --dev
+cp config.example.json config.json
+uv sync --extra vector
+```
 
-# Lint
-uv run ruff check .
-uv run ruff format --check .
+Export only variables referenced by local `config.json`.
 
-# Test
+## Quality Gates
+
+```bash
 uv run pytest
-
-# Run
-uv run python main.py bot
+uv run ruff check . --select F,I
 ```
 
----
+The repository currently has full-repo Ruff formatting debt; `ruff format
+--check .` reports the existing files that need a dedicated formatting-only
+change. Do not mix that mechanical rewrite into feature or documentation work.
 
-## Struktur Commit
+Security tools are installed under `.audit-tools/bin/` in the maintained local
+environment:
 
+```bash
+.audit-tools/bin/bandit -r core memory tools api mcp_server
+.audit-tools/bin/semgrep --config auto core memory tools api mcp_server
+.audit-tools/bin/pip-audit -r requirements.txt
 ```
-type: deskripsi singkat
 
-- detail perubahan
-- alasan perubahan
-```
+## Dependencies
 
-Types: `feat`, `fix`, `refactor`, `docs`, `chore`, `test`
+Before adding a dependency:
 
----
+1. Check stdlib and existing dependencies.
+2. Document the reason in `docs/DEPENDENCIES.md`.
+3. Put optional capabilities behind an extra.
+4. Update `uv.lock`.
+5. Run tests and dependency audit.
 
-## Inject Fitur Baru
+Use `uv add`, not direct `pip install`, for project dependencies.
 
-| Jenis | Cara | Auto-loaded? |
-|---|---|---|
-| Skill | Drop `.md` ke `skills/` | ✅ Ya |
-| Tool | Drop `.py` ke `tools/` | ✅ Ya |
-| Plugin/Hook | Drop `.py` ke `plugins/` | ✅ Ya |
-| LLM Provider | Tambah provider baru di core/llm.py | ❌ Daftarkan credentials di config.py & config.json |
+## Extension Changes
 
-Tidak perlu ubah core untuk menambah skill, tool, atau plugin.
+| Type | Required changes |
+|---|---|
+| Skill | Add Markdown file with valid YAML frontmatter and tests |
+| Plugin | Add plugin class under configured directory and tests |
+| Tool | Add function, `TOOLS_SCHEMA`, `TOOLS_MAPPING`, and tests |
+| Provider layout | Update `core/llm.py`, config docs/template, and tests |
+
+Tools are not auto-discovered from `tools.dir`.
+
+## Commits And Publishing
+
+Use concise conventional prefixes: `feat`, `fix`, `refactor`, `docs`, `chore`,
+or `test`.
+
+The maintained workflow is:
+
+1. verify;
+2. commit scoped files;
+3. authenticate Git operations with `gh auth setup-git`;
+4. push without force unless an explicitly approved history rewrite requires
+   `--force-with-lease`.

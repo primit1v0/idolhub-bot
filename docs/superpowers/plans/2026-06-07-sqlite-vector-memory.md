@@ -1,5 +1,12 @@
 # SQLite Vector Memory (sqlite-vec) Implementation Plan
 
+> **Historical status: Implemented.**
+>
+> Unchecked boxes are stale plan metadata, not incomplete runtime work.
+> References to modifying or committing `config.json` are obsolete because
+> that file is local-only. The phase number is local to memory optimization.
+> See [`docs/BASELINE.md`](../../BASELINE.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implement Phase 3 of the memory optimizations by adding local SQLite-based vector memory using the `sqlite-vec` extension and fusing results in the agent RRF merger.

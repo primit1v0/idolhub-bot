@@ -1,5 +1,5 @@
 {
-  "_doc": "Template config.json — copy isi ke config.json, isi $VAR ke /etc/idolhub/secrets.env",
+  "_doc": "Template config.json — copy ke config.json lokal, isi $VAR lewat environment",
 
   "app": {
     "_doc": "Konfigurasi aplikasi utama",
@@ -17,6 +17,7 @@
     "_max_iterations_doc": "Batas loop agent sebelum force-stop (cegah infinite loop)",
     "tools_enabled": true,
     "memory_enabled": true,
+    "_memory_enabled_doc": "Diterima schema tetapi belum mengontrol retrieval runtime",
     "filter_enabled": true,
     "gating_enabled": true
   },
@@ -41,32 +42,16 @@
   },
 
   "providers": {
-    "_doc": "Credentials per provider — hanya provider aktif yang digunakan, sisanya diabaikan",
+    "_doc": "Simpan hanya provider yang dikonfigurasi; semua $VAR di file akan di-resolve",
     "gemini": {
       "_doc": "Gemini OpenAI-compatible endpoint",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
       "api_key": "$GEMINI_API_KEY"
-    },
-    "openai": {
-      "_doc": "OpenAI atau endpoint OpenAI-compatible (Ollama, LM Studio, dll)",
-      "base_url": "$OPENAI_BASE_URL",
-      "_base_url_example": "https://api.openai.com/v1",
-      "api_key": "$OPENAI_API_KEY"
-    },
-    "openai_codex": {
-      "_doc": "OpenAI Codex via OAuth token",
-      "base_url": "https://api.openai.com/v1",
-      "oauth_token": "$OPENAI_CODEX_TOKEN"
-    },
-    "github_copilot": {
-      "_doc": "GitHub Copilot via CLI auth token (gh auth token) atau OAuth",
-      "base_url": "https://api.githubcopilot.com",
-      "cli_token": "$GITHUB_COPILOT_TOKEN"
     }
   },
 
   "memory": {
-    "_doc": "Konfigurasi memory — short_term aktif Phase 1, long_term aktif Phase 2",
+    "_doc": "Short-term SQLite aktif; sqlite-vec long-term bersifat opsional",
     "short_term": {
       "backend": "sqlite",
       "_backend_options": "sqlite",
@@ -83,7 +68,7 @@
     "long_term": {
       "backend": "none",
       "_backend_options": "none | sqlite_vec",
-      "_sqlite_vec_note": "Aktifkan di Phase 2: uv sync --extra vector",
+      "_sqlite_vec_note": "Untuk sqlite_vec jalankan: uv sync --extra vector",
       "path": "./data/vectors.db",
       "embedding_model": "text-embedding-3-small",
       "_embedding_model_doc": "Model embedding OpenAI-compatible untuk semantic search"
@@ -98,8 +83,9 @@
   },
 
   "tools": {
-    "_doc": "Tool implementations (.py files, auto-discovered via registry)",
+    "_doc": "Built-in tools terdaftar eksplisit di tools/registry.py",
     "dir": "./tools",
+    "_dir_doc": "Diterima schema tetapi belum dipakai untuk auto-discovery",
     "enabled": [],
     "_enabled_doc": "Kosong = semua tool aktif. Isi nama untuk whitelist: ['search', 'calculator']"
   },
@@ -108,12 +94,13 @@
     "_doc": "Hook/plugin system (.py files, auto-loaded on startup)",
     "dir": "./plugins",
     "enabled": [],
-    "_enabled_doc": "Kosong = semua plugin aktif. Isi nama untuk whitelist: ['logger']"
+    "_enabled_doc": "Diterima schema tetapi whitelist plugin belum ditegakkan runtime"
   },
 
   "api": {
-    "_doc": "FastAPI REST server — diaktifkan saat mode=api atau mode=all",
+    "_doc": "FastAPI REST server — dimulai saat mode=api",
     "enabled": true,
+    "_enabled_doc": "Diterima schema tetapi belum menjadi runtime gate",
     "host": "127.0.0.1",
     "port": 8000,
     "cors_origins": [],
@@ -121,9 +108,11 @@
   },
 
   "mcp": {
-    "_doc": "MCP protocol server — compatible dengan Claude Desktop, Cursor, Windsurf",
+    "_doc": "MCP stdio server — dimulai saat mode=mcp",
     "enabled": true,
-    "port": 8001
+    "_enabled_doc": "Diterima schema tetapi belum menjadi runtime gate",
+    "port": 8001,
+    "_port_doc": "Diterima schema tetapi tidak digunakan oleh transport stdio"
   },
 
   "logging": {

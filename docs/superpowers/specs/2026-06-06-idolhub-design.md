@@ -1,5 +1,15 @@
 # idolhub — Design Specification
 
+> **Historical status: Superseded as the active baseline.**
+>
+> This document preserves the original architecture proposal. The implemented
+> structure, status, and roadmap are defined in
+> [`docs/BASELINE.md`](../../BASELINE.md). References to tracked `config.json`,
+> provider adapter files, `core/memory.py`, `memory/vector_store.py`, or a
+> global numbered roadmap are obsolete. The old `/etc/idolhub/secrets.env`
+> path is also superseded by the host-specific environment path documented in
+> the current systemd templates.
+
 **Date:** 2026-06-06  
 **Repo:** https://github.com/primit1v0/idolhub-bot  
 **Status:** Approved ✅
@@ -245,7 +255,7 @@ Paralel:
 ### 4.2 Secrets — `/etc/idolhub/secrets.env`
 
 ```env
-# /etc/idolhub/idolhub.env
+# machine-local EnvironmentFile
 # chmod 600 — TIDAK pernah masuk git
 TELEGRAM_BOT_TOKEN=xxxxx
 OPENAI_API_KEY=sk-xxxxx
@@ -354,7 +364,7 @@ Terinformasi dari repositori `mrktt`, kami menambahkan arsitektur memori hibrida
 ### Tambahan Fitur Heartbeat (Sistem Monitor)
 Terinspirasi dari repositori `fortress-v2`, kami menambahkan utilitas monitoring server yang sangat ringan dan terintegrasi:
 - **Zero-Dependency Monitor (`tools/heartbeat.py`):** Modul mandiri berbasis Python standar untuk mengumpulkan metrik sistem RAM (`/proc/meminfo`), CPU load (`/proc/loadavg`), dan penggunaan Disk (`os.statvfs`) secara lokal tanpa bergantung pada library eksternal `psutil`.
-- **Integrasi Endpoint `/health`:** Memperluas API `/health` di [api/routes/health.py](file:///opt/idolhub/api/routes/health.py) untuk menyertakan metrik kesehatan sistem secara dinamis.
+- **Integrasi Endpoint `/health`:** Memperluas API `/health` di [`api/routes/health.py`](../../../api/routes/health.py) untuk menyertakan metrik kesehatan sistem secara dinamis.
 
 ---
 
@@ -385,10 +395,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=sandi
-WorkingDirectory=/opt/idolhub
+User=@IDOLHUB_USER@
+WorkingDirectory=@IDOLHUB_DIR@
 EnvironmentFile=/etc/idolhub/secrets.env
-ExecStart=/opt/idolhub/.venv/bin/python main.py
+ExecStart=@IDOLHUB_DIR@/.venv/bin/python main.py
 Restart=on-failure
 RestartSec=5
 
