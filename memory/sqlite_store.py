@@ -26,6 +26,8 @@ class SqliteStore:
         self.db_path = cfg.memory.short_term.path
         self.max_messages = cfg.memory.short_term.max_messages
         self.fts_context_window = cfg.memory.short_term.fts_context_window
+        self.auto_prune_enabled = getattr(cfg.memory.short_term, "auto_prune_enabled", True)
+        self.auto_prune_limit = getattr(cfg.memory.short_term, "auto_prune_limit", 1000)
         self.db = None
 
     async def initialize(self):
@@ -123,6 +125,21 @@ class SqliteStore:
             'INSERT INTO messages (user_id, role, content) VALUES (?, ?, ?)',
             (str(user_id), role, content)
         )
+        
+        if self.auto_prune_enabled:
+            # Delete messages exceeding the auto_prune_limit
+            prune_query = '''
+                DELETE FROM messages
+                WHERE user_id = ?
+                  AND id NOT IN (
+                      SELECT id FROM messages
+                      WHERE user_id = ?
+                      ORDER BY id DESC
+                      LIMIT ?
+                  )
+            '''
+            await self.db.execute(prune_query, (str(user_id), str(user_id), self.auto_prune_limit))
+
         await self.db.commit()
 
     async def get_history(self, user_id: str) -> List[Dict[str, str]]:

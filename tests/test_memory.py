@@ -245,6 +245,112 @@ async def test_fts5_context_threading(tmp_path):
     await store.close()
 
 
+@pytest.mark.asyncio
+async def test_memory_auto_prune_enforced(tmp_path):
+    # Setup config with auto_prune_limit = 3
+    db_path = str(tmp_path / "test_prune.db")
+    cfg = AppConfig.model_validate({
+        "app": {"name": "test", "mode": "bot"},
+        "telegram": {"token": "test"},
+        "agent": {"system_prompt": "sys"},
+        "llm": {"provider": "openai", "model": "gpt-4"},
+        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "memory": {
+            "short_term": {
+                "backend": "sqlite",
+                "path": db_path,
+                "max_messages": 10,
+                "fts_context_window": 1,
+                "auto_prune_enabled": True,
+                "auto_prune_limit": 3
+            },
+            "long_term": {"backend": "none", "path": ""}
+        },
+        "skills": {"dir": "./skills"},
+        "tools": {"dir": "./tools"},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "mcp": {"enabled": False},
+        "logging": {"level": "INFO"}
+    })
+    store = SqliteStore(cfg)
+    await store.initialize()
+    
+    user_id = "user_prune"
+    # Insert 5 messages
+    await store.add_message(user_id, "user", "Message apple")
+    await store.add_message(user_id, "assistant", "Message banana")
+    await store.add_message(user_id, "user", "Message cherry")
+    await store.add_message(user_id, "assistant", "Message date")
+    await store.add_message(user_id, "user", "Message elderberry")
+    
+    # Check that only the newest 3 messages remain in database
+    async with store.db.execute("SELECT content FROM messages WHERE user_id = ? ORDER BY id ASC", (user_id,)) as cursor:
+        rows = await cursor.fetchall()
+    contents = [r[0] for r in rows]
+    assert contents == ["Message cherry", "Message date", "Message elderberry"]
+    
+    # Verify FTS5 matches the pruned state
+    # Searching for "apple" should return nothing since it is pruned
+    fts_results_apple = await store.search_history_fts(user_id, "apple")
+    assert len(fts_results_apple) == 0
+    
+    # Searching for "elderberry" should return the match
+    fts_results_elderberry = await store.search_history_fts(user_id, "elderberry")
+    assert len(fts_results_elderberry) > 0
+    
+    await store.close()
+
+
+@pytest.mark.asyncio
+async def test_memory_auto_prune_disabled(tmp_path):
+    # Setup config with auto_prune_enabled = False and limit = 3
+    db_path = str(tmp_path / "test_prune_disabled.db")
+    cfg = AppConfig.model_validate({
+        "app": {"name": "test", "mode": "bot"},
+        "telegram": {"token": "test"},
+        "agent": {"system_prompt": "sys"},
+        "llm": {"provider": "openai", "model": "gpt-4"},
+        "providers": {"openai": {"base_url": "dummy", "api_key": "dummy"}},
+        "memory": {
+            "short_term": {
+                "backend": "sqlite",
+                "path": db_path,
+                "max_messages": 10,
+                "fts_context_window": 1,
+                "auto_prune_enabled": False,
+                "auto_prune_limit": 3
+            },
+            "long_term": {"backend": "none", "path": ""}
+        },
+        "skills": {"dir": "./skills"},
+        "tools": {"dir": "./tools"},
+        "plugins": {"dir": "./plugins"},
+        "api": {"enabled": False},
+        "mcp": {"enabled": False},
+        "logging": {"level": "INFO"}
+    })
+    store = SqliteStore(cfg)
+    await store.initialize()
+    
+    user_id = "user_prune"
+    # Insert 5 messages
+    await store.add_message(user_id, "user", "Message apple")
+    await store.add_message(user_id, "assistant", "Message banana")
+    await store.add_message(user_id, "user", "Message cherry")
+    await store.add_message(user_id, "assistant", "Message date")
+    await store.add_message(user_id, "user", "Message elderberry")
+    
+    # Check that all 5 messages remain in database
+    async with store.db.execute("SELECT content FROM messages WHERE user_id = ? ORDER BY id ASC", (user_id,)) as cursor:
+        rows = await cursor.fetchall()
+    contents = [r[0] for r in rows]
+    assert len(contents) == 5
+    assert contents == ["Message apple", "Message banana", "Message cherry", "Message date", "Message elderberry"]
+    
+    await store.close()
+
+
 
 
 
