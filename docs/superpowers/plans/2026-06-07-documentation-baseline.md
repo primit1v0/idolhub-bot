@@ -72,8 +72,8 @@ provenance through explicit supersession banners.
 
 ### Task 6: Rewrite And Publish Git History
 
-- [ ] Commit documentation cleanup.
-- [ ] Rewrite all repository refs to remove `config.json`.
-- [ ] Force-push with lease through GitHub authentication.
-- [ ] Verify local and GitHub `main` are identical.
-- [ ] Verify no reachable commit contains `config.json`.
+- [x] Commit documentation cleanup.
+- [x] Rewrite all repository refs to remove `config.json`.
+- [x] Force-push with lease through GitHub authentication.
+- [x] Verify local and GitHub `main` are identical.
+- [x] Verify no reachable commit contains `config.json`.
