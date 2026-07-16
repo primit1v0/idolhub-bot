@@ -17,7 +17,7 @@ dependencies = [
     "fastapi>=0.115.0",
     "uvicorn>=0.32.0",
     # MCP protocol — official SDK
-    "mcp>=1.0.0",
+    "mcp>=1.28.1",
     # Memory — lightweight async SQLite
     "aiosqlite>=0.20.0",
     # Data validation — minimal usage
